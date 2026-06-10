@@ -1,0 +1,7 @@
+{
+  "api_base_url": "https://api.example.com",
+  "app_name": "Auth Client",
+  "version": "1.0.0",
+  "log_level": "info",
+  "registration_url": "https://example.com/register"
+}

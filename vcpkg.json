@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "cpp-auth-client",
+  "version": "1.0.0",
+  "description": "Windows C++20 ImGui secure authentication client",
+  "builtin-baseline": "32305df7d0b9a308e6ac454dd98ebfe550342c09",
+  "dependencies": [
+    {
+      "name": "imgui",
+      "features": ["dx11-binding", "win32-binding"]
+    },
+    {
+      "name": "curl",
+      "features": ["ssl"]
+    },
+    "nlohmann-json",
+    "spdlog",
+    "openssl"
+  ]
+}
