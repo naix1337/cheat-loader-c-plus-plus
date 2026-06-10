@@ -113,6 +113,14 @@ Caddy terminates TLS; the client connects to `https://api.yourdomain.com` via `a
 - Only TLS 1.3 is accepted
 - Registration is not available inside the client
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [deploy/SERVER-SETUP.md](deploy/SERVER-SETUP.md) | Full vServer deployment guide |
+| [docs/registration-website.md](docs/registration-website.md) | Registration site architecture |
+| [docs/security-review.md](docs/security-review.md) | Security analysis & risk matrix |
+
 ## License
 
 Private project — all rights reserved unless otherwise specified.
