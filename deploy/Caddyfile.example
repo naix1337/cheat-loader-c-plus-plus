@@ -1,0 +1,19 @@
+# /etc/caddy/Caddyfile
+# Replace domains with your own. Caddy obtains Let's Encrypt certs automatically.
+
+api.yourdomain.com {
+    reverse_proxy 127.0.0.1:3000
+    encode gzip
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+
+yourdomain.com {
+    reverse_proxy 127.0.0.1:8080
+    encode gzip
+}

@@ -1,0 +1,22 @@
+[Unit]
+Description=c-loader Authentication API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=cloader
+Group=cloader
+WorkingDirectory=/opt/cloader/backend
+EnvironmentFile=/opt/cloader/backend/.env
+ExecStart=/usr/bin/node /opt/cloader/backend/dist/index.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/cloader/backend
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -57,15 +57,26 @@ Optional font: `assets/fonts/Roboto-Regular.ttf`
 
 ## Server (Linux vServer)
 
-The client needs a backend API. Deploy on your server:
+Full setup guide: **[deploy/SERVER-SETUP.md](deploy/SERVER-SETUP.md)**
 
 | Component | Purpose |
 |-----------|---------|
 | **Ubuntu 22.04/24.04** | OS |
 | **Caddy** | HTTPS reverse proxy, Let's Encrypt |
 | **PostgreSQL** | Users, refresh tokens, login attempts |
-| **Node.js API** (planned) | Auth endpoints, Argon2id, JWT RS256, TOTP |
-| **Registration website** | Account signup, email verify, 2FA setup |
+| **Node.js API** (`backend/`) | Auth endpoints, Argon2id, JWT RS256, TOTP |
+| **Registration website** | Account signup (see `docs/registration-website.md`) |
+
+### Quick start on server
+
+```bash
+git clone https://github.com/naix1337/c-loader.git /opt/cloader
+cd /opt/cloader/backend
+cp .env.example .env   # edit secrets
+npm ci && npm run build && npm run migrate
+npx tsx src/scripts/create-user.ts demo_user demo@example.com 'DemoPass2026!'
+sudo systemctl enable --now auth-api   # after copying systemd unit
+```
 
 ### API endpoints (required)
 
