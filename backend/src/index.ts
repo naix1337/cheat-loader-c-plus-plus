@@ -49,10 +49,8 @@ app.use("/", forumRoutes);
 app.use("/api/admin", adminRoutes);
 
 // User-content API — notifications, conversations, bookmarks, profile
-app.use("/api/notifications", userContentRoutes);
-app.use("/api/conversations", userContentRoutes);
-app.use("/api/bookmarks", userContentRoutes);
-app.use("/api/user", userContentRoutes);  // for profile routes
+// Mount at root since all routes are fully qualified with /api/...
+app.use("/", userContentRoutes);
 
 // 404 handler — skip for paths that might be static files
 app.use((req, res) => {
