@@ -2,19 +2,20 @@
 
 #include "auth/AuthService.h"
 #include "network/ApiClient.h"
-#include "ui/UIManager.h"
+#include "ui/WebViewManager.h"
 
 #include <Windows.h>
-#include <d3d11.h>
-#include <dxgi.h>
 
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <vector>
 
 class App {
 public:
-    static constexpr int kWindowWidth = 480;
-    static constexpr int kWindowHeight = 520;
+    static constexpr int kWindowWidth = 520;
+    static constexpr int kWindowHeight = 620;
 
     explicit App(HINSTANCE instance);
     ~App();
@@ -23,19 +24,14 @@ public:
     App& operator=(const App&) = delete;
 
     [[nodiscard]] bool initialize();
-
     [[nodiscard]] int run();
-
     void shutdown();
 
 private:
     [[nodiscard]] bool createWindow();
-    [[nodiscard]] bool createDevice();
-    void cleanupDevice();
-    void createRenderTarget();
-    void cleanupRenderTarget();
 
-    void renderFrame();
+    void enqueueMainThread(std::function<void()> task);
+    void processMainThreadQueue();
 
     static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
@@ -43,15 +39,12 @@ private:
     HWND hwnd_ = nullptr;
     std::wstring window_title_;
 
-    ID3D11Device* device_ = nullptr;
-    ID3D11DeviceContext* device_context_ = nullptr;
-    IDXGISwapChain* swap_chain_ = nullptr;
-    ID3D11RenderTargetView* render_target_ = nullptr;
-
     network::ApiClient api_client_;
     auth::AuthService auth_service_;
-    std::unique_ptr<ui::UIManager> ui_manager_;
+    std::unique_ptr<ui::WebViewManager> ui_manager_;
 
-    bool imgui_initialized_ = false;
+    std::mutex queue_mutex_;
+    std::vector<std::function<void()>> task_queue_;
+
     bool running_ = false;
 };

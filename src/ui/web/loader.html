@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AETHER Secure Loader</title>
+<script src="./bridge.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,sans-serif;background:#06070b;color:#c7d6e2;overflow:hidden}
+  .card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:480px;border-radius:18px;padding:26px;background:linear-gradient(180deg,rgba(18,24,33,0.95),rgba(10,13,18,0.95));border:1px solid rgba(0,212,255,0.3);box-shadow:0 0 60px -12px rgba(0,212,255,0.35)}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .diamond{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,.5);border-radius:8px;background:linear-gradient(145deg,rgba(0,212,255,.16),transparent);box-shadow:0 0 14px -2px rgba(0,212,255,.5)}
+  .diamond-inner{width:11px;height:11px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 9px #00d4ff}
+  .title{font-size:17px;font-weight:700;letter-spacing:3px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,.5)}
+  .subtitle{font-size:10px;letter-spacing:2px;color:#5d7488;margin-top:2px}
+  .version{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;color:#8b5cf6;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1)}
+  .sep{height:1px;margin:18px 0;background:linear-gradient(90deg,transparent,rgba(0,212,255,.35),transparent)}
+  .status-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .status-label{font-size:10px;letter-spacing:2px;color:#4f6478}
+  .status-dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 10px var(--status-color)}
+  .status-text{font-size:17px;font-weight:600;letter-spacing:1px;color:#e8f4ff}
+  .badge{padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1.5px;white-space:nowrap}
+  .segments{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:18px}
+  .seg{height:4px;border-radius:3px;background:rgba(0,212,255,.15);transition:background .4s}
+  .seg.active{background:#00d4ff;box-shadow:0 0 10px rgba(0,212,255,.6)}
+  .prog-label{display:flex;justify-content:space-between;font-size:10px;letter-spacing:2px;color:#4f6478;margin-bottom:6px}
+  .prog-pct{font-size:15px;font-weight:700;color:#00d4ff;text-shadow:0 0 10px rgba(0,212,255,.6)}
+  .prog-bar{position:relative;height:9px;border-radius:6px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.16);overflow:hidden;margin-bottom:18px}
+  .prog-fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#0094c7,#00d4ff);border-radius:6px;transition:width .18s linear;box-shadow:0 0 14px rgba(0,212,255,.7)}
+  .prog-shimmer{position:absolute;top:0;bottom:0;width:40px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:shimmer 1.6s linear infinite}
+  .console{height:176px;border-radius:11px;border:1px solid rgba(0,212,255,.16);background:linear-gradient(180deg,rgba(2,5,9,.95),rgba(4,8,12,.95));overflow:hidden;margin-bottom:18px}
+  .console-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid rgba(0,212,255,.12)}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .console-title{margin-left:6px;font-size:10px;letter-spacing:1.5px;color:#43586b}
+  .log-area{height:134px;overflow-y:auto;padding:9px 12px;font-size:11.5px;line-height:1.62;font-family:'Courier New',monospace}
+  .log-area::-webkit-scrollbar{width:6px}
+  .log-area::-webkit-scrollbar-thumb{background:rgba(0,212,255,.25);border-radius:8px}
+  .log-line{display:flex;gap:9px;opacity:0;animation:fadeIn .3s ease forwards}
+  .log-time{color:#3a4d5e;flex:none}
+  .log-tag{color:#44586a;flex:none}
+  .log-text{word-break:break-word}
+  .cursor-line{display:flex;gap:9px}
+  .cursor-text{color:#3a4d5e}
+  .cursor-blink{display:inline-block;width:7px;height:13px;background:#00d4ff;margin-left:2px;animation:blink 1s steps(1) infinite;box-shadow:0 0 6px #00d4ff;vertical-align:-2px}
+  .launch-btn{width:100%;padding:15px;border-radius:12px;font-size:15px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all .15s;margin-bottom:14px}
+  .launch-btn:disabled{cursor:not-allowed;opacity:.5}
+  .footer{display:flex;justify-content:space-between;font-size:10px;letter-spacing:1px;color:#3c4e5e}
+  .status-bar{display:flex;justify-content:space-between;padding-top:14px;border-top:1px solid rgba(0,212,255,.12);font-size:10px;color:#455468}
+  @keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(400%)}}
+  @keyframes fadeIn{to{opacity:1}}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+</style>
+</head>
+<body>
+<div class="card" id="app">
+  <div class="header">
+    <div class="logo">
+      <div class="diamond"><div class="diamond-inner"></div></div>
+      <div><div class="title" id="appTitle">AETHER</div><div class="subtitle">SECURE MODULE LOADER</div></div>
+    </div>
+    <div class="version" id="versionBadge">v1.0.0</div>
+  </div>
+  <div class="sep"></div>
+
+  <div class="status-row">
+    <div><div class="status-label">STATUS</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:6px">
+        <div class="status-dot" id="statusDot" style="--status-color:#3ef0a3;background:#3ef0a3"></div>
+        <div class="status-text" id="statusText">INITIALIZING</div>
+      </div>
+    </div>
+    <div class="badge" id="statusBadge" style="color:#ffcf5c;border:1px solid rgba(255,207,92,.35);background:rgba(255,207,92,.1)">INITIALIZING</div>
+  </div>
+
+  <div class="segments" id="segments">
+    <div class="seg" data-idx="0"></div>
+    <div class="seg" data-idx="1"></div>
+    <div class="seg" data-idx="2"></div>
+    <div class="seg" data-idx="3"></div>
+  </div>
+
+  <div>
+    <div class="prog-label"><span>PROGRESS</span><span class="prog-pct" id="progPct">0%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"><div class="prog-shimmer"></div></div></div>
+  </div>
+
+  <div class="console">
+    <div class="console-bar">
+      <div class="dot" style="background:#ff5f56"></div>
+      <div class="dot" style="background:#ffbd2e"></div>
+      <div class="dot" style="background:#27c93f"></div>
+      <span class="console-title">console — loader.log</span>
+    </div>
+    <div class="log-area" id="logArea"></div>
+  </div>
+
+  <button class="launch-btn" id="launchBtn" disabled
+    style="color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf);border:none;box-shadow:0 8px 24px -8px rgba(0,212,255,.55)">
+    INITIALIZING
+  </button>
+
+  <div class="footer">
+    <span id="hwidDisplay">HWID · a4:f7:9c:2b:81</span>
+    <span id="pingDisplay">— ms</span>
+  </div>
+
+  <div class="status-bar" id="statusBar">
+    <span id="userDisplay">Guest</span>
+    <span id="sessionDisplay">Session: —</span>
+  </div>
+</div>
+
+<script>
+// ── Loader State ──
+const LOG_DEFS = [
+  {tag:'[sys]', text:'Bootstrapping secure environment', type:'info', at:2},
+  {tag:'[net]', text:'Establishing encrypted tunnel → edge-07', type:'info', at:8},
+  {tag:'[auth]', text:'Reading hardware fingerprint', type:'info', at:16},
+  {tag:'[auth]', text:'Validating license key', type:'warn', at:26},
+  {tag:'[auth]', text:'License valid — tier: PREMIUM', type:'ok', at:38},
+  {tag:'[cdn]', text:'Fetching module manifest (rev 4471)', type:'info', at:47},
+  {tag:'[cdn]', text:'Downloading payload — 3.24 MB', type:'action', at:55},
+  {tag:'[core]', text:'Decrypting modules (AES-256)', type:'info', at:63},
+  {tag:'[core]', text:'Mapping target process pid:8124', type:'info', at:71},
+  {tag:'[core]', text:'Allocating memory region 0x7FF…', type:'info', at:78},
+  {tag:'[core]', text:'Resolving imports · bypassing checks', type:'warn', at:85},
+  {tag:'[inj]', text:'Injecting modules → hooks installed', type:'action', at:93},
+  {tag:'[inj]', text:'Integrity OK · all systems nominal', type:'ok', at:98},
+];
+const COLORS = {info:'#7f9bb0', warn:'#ffcf5c', ok:'#3ef0a3', action:'#00d4ff'};
+const DURATION = 6000;
+
+let state = {progress:0, ready:false, launched:false, user:'Guest'};
+let logs = [], nextLog = 0, t0 = performance.now();
+
+function easeInOut(t) {
+  return t < 0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+}
+
+function fmtTime(ms) { return '+' + (ms/1000).toFixed(2); }
+
+function addLog(tag, text, type, elapsed) {
+  const log = document.getElementById('logArea');
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.innerHTML = '<span class="log-time">'+fmtTime(elapsed)+'</span><span class="log-tag">'+tag+'</span><span class="log-text" style="color:'+COLORS[type]+'">'+text+'</span>';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function updateUI(pct) {
+  const ready = pct >= 100;
+  state.progress = pct;
+  state.ready = ready;
+
+  // Progress
+  document.getElementById('progPct').textContent = pct + '%';
+  document.getElementById('progFill').style.width = easeInOut(pct/100)*100 + '%';
+
+  // Segments
+  const segs = Math.min(4, Math.floor(pct / 25) + (ready?0:0));
+  document.querySelectorAll('.seg').forEach((el,i) => {
+    el.classList.toggle('active', i < segs);
+  });
+
+  // Status
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const badge = document.getElementById('statusBadge');
+  const btn = document.getElementById('launchBtn');
+
+  if (ready) {
+    dot.style.background = '#3ef0a3';
+    dot.style.setProperty('--status-color','#3ef0a3');
+    text.textContent = 'ALL SYSTEMS NOMINAL';
+    badge.textContent = 'READY';
+    badge.style.color = '#3ef0a3';
+    badge.style.borderColor = 'rgba(62,240,163,.35)';
+    badge.style.background = 'rgba(62,240,163,.1)';
+    btn.disabled = false;
+    btn.textContent = 'LAUNCH';
+    btn.style.background = 'linear-gradient(180deg,#1ee0ff,#00a6cf)';
+    btn.style.color = '#03121a';
+  } else {
+    dot.style.background = '#ffcf5c';
+    dot.style.setProperty('--status-color','#ffcf5c');
+    text.textContent = 'INITIALIZING SECURE MODULES';
+    badge.textContent = 'INITIALIZING';
+    badge.style.color = '#ffcf5c';
+    badge.style.borderColor = 'rgba(255,207,92,.35)';
+    badge.style.background = 'rgba(255,207,92,.1)';
+  }
+}
+
+// ── Boot loop ──
+function tick() {
+  const elapsed = performance.now() - t0;
+  const t = Math.min(1, elapsed / DURATION);
+  const pct = Math.round(easeInOut(t) * 100);
+
+  // Push logs
+  while (nextLog < LOG_DEFS.length && pct >= LOG_DEFS[nextLog].at) {
+    const l = LOG_DEFS[nextLog++];
+    addLog(l.tag, l.text, l.type, elapsed);
+  }
+
+  updateUI(pct);
+
+  if (pct < 100) requestAnimationFrame(tick);
+  else {
+    // Final log cursor
+    const log = document.getElementById('logArea');
+    const cursor = document.createElement('div');
+    cursor.className = 'cursor-line';
+    cursor.innerHTML = '<span class="cursor-text">ready ></span><span class="cursor-blink"></span>';
+    log.appendChild(cursor);
+  }
+}
+
+// ── Launch button ──
+document.getElementById('launchBtn').addEventListener('click', () => {
+  if (state.launched || !state.ready) return;
+  state.launched = true;
+  const btn = document.getElementById('launchBtn');
+  btn.textContent = 'LAUNCHING...';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = '✓ INJECTED';
+    btn.style.background = 'rgba(62,240,163,.15)';
+    btn.style.color = '#3ef0a3';
+    btn.style.boxShadow = '0 0 24px -6px rgba(62,240,163,.6)';
+    btn.style.border = '1px solid rgba(62,240,163,.45)';
+  }, 1700);
+});
+
+// ── Native bridge handlers ──
+document.addEventListener('native-config', (e) => {
+  const cfg = e.detail;
+  document.getElementById('versionBadge').textContent = 'v' + cfg.version;
+  document.getElementById('appTitle').textContent = cfg.app_name || 'AETHER';
+});
+
+document.addEventListener('native-login_result', (e) => {
+  const r = e.detail;
+  if (r.success) {
+    state.user = r.username;
+    document.getElementById('userDisplay').textContent = r.username;
+    document.getElementById('statusBar').querySelector('span:last-child').textContent = 'Logged in';
+  }
+});
+
+// ── Start boot on load ──
+window.addEventListener('DOMContentLoaded', () => {
+  t0 = performance.now();
+  requestAnimationFrame(tick);
+  // Ping simulation
+  setInterval(() => {
+    document.getElementById('pingDisplay').textContent = (8+Math.floor(Math.random()*15)) + ' ms';
+  }, 2000);
+});
+</script>
+</body>
+</html>
