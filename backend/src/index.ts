@@ -28,7 +28,7 @@ app.use(globalRateLimiter);
 
 // Serve static frontend from public/ directory
 const publicDir = path.join(__dirname, "public");
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, { extensions: ["html"] }));
 
 // API routes
 app.get("/health", (_req, res) => {
