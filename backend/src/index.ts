@@ -60,6 +60,11 @@ app.get("/profile/:username", (_req, res) => {
   res.sendFile(path.join(publicDir, "profile.html"));
 });
 
+// Admin panel — serve the static admin.html (JS handles auth + API calls)
+app.get("/admin", (_req, res) => {
+  res.sendFile(path.join(publicDir, "admin.html"));
+});
+
 // 404 handler — skip for paths that might be static files
 app.use((req, res) => {
   // Don't 404 for root — index.html is served by express.static

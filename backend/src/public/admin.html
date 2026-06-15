@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel — AETHER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; font-family: 'Space Grotesk', system-ui, sans-serif; color: #c7d6e2; }
+  @keyframes ad-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes ad-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.25; } }
+  @keyframes ad-spin { to { transform: rotate(360deg); } }
+  @keyframes ad-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes ad-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.4), 0 8px 24px -8px rgba(0,212,255,0.35); } 50% { box-shadow: 0 0 20px 1px rgba(0,212,255,0.5), 0 8px 30px -6px rgba(0,212,255,0.5); } }
+  @keyframes ad-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+  img { max-width: 100%; }
+  .ad-row-expand { animation: ad-rise 0.2s ease both; }
+  .ad-pulse-btn { animation: ad-pulse 2.4s ease-in-out infinite; }
+  .ad-shimmer { background: linear-gradient(90deg, transparent 30%, rgba(0,212,255,0.05) 50%, transparent 70%); background-size: 200% 100%; animation: ad-shimmer 2s infinite; }
+  .ad-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .ad-table-inner { min-width: 600px; }
+  @media (max-width: 768px) {
+    #statsRow { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important; }
+    .ad-hide-mobile { display: none !important; }
+  }
+  @media (max-width: 480px) {
+    #statsRow { grid-template-columns: repeat(2, 1fr) !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+
+// ── HTML escaper ──────────────────────────────────────────
+function esc(s) { var d = document.createElement('div'); d.textContent = '' + (s == null ? '' : s); return d.innerHTML; }
+
+// ── Token helpers ─────────────────────────────────────────
+function getToken() {
+  var m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+function apiHeaders() {
+  var h = { 'Content-Type': 'application/json' };
+  var t = getToken();
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+
+function decodeToken(token) {
+  try {
+    var parts = token.split('.');
+    if (parts.length !== 3) return null;
+    return JSON.parse(atob(parts[1]));
+  } catch (e) { return null; }
+}
+
+// ── Format helpers ────────────────────────────────────────
+function fmtCount(n) {
+  n = Number(n) || 0;
+  return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '' + n;
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '—';
+  var d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  var diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return Math.floor(diff / 604800) + 'w ago';
+}
+
+function fmtDate(dateStr) {
+  if (!dateStr) return '—';
+  var d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ── API helpers ───────────────────────────────────────────
+async function apiGet(path) {
+  try {
+    var r = await fetch(path, { headers: apiHeaders() });
+    if (r.status === 401 || r.status === 403) return { _error: r.status };
+    if (!r.ok) return null;
+    return r.json();
+  } catch (e) { return null; }
+}
+
+async function apiPost(path, body) {
+  try {
+    var r = await fetch(path, { method: 'POST', headers: apiHeaders(), body: JSON.stringify(body || {}) });
+    if (r.status === 401 || r.status === 403) return { _error: r.status };
+    return r.json();
+  } catch (e) { return null; }
+}
+
+// ── Mock data ─────────────────────────────────────────────
+var MOCK = {
+  stats: { total_users: 2847, total_threads: 938, total_posts: 12456, open_reports: 7 },
+  reports: [
+    { id: '1', thread_title: 'Suspicious activity in general', reporter_username: 'mod_bot', reason: 'Spam / advertising', created_at: new Date(Date.now() - 3600000 * 2).toISOString(), status: 'open', thread_slug: 'general-discussion' },
+    { id: '2', thread_title: 'User posting malware links', reporter_username: 'security_team', reason: 'Malicious content', created_at: new Date(Date.now() - 3600000 * 5).toISOString(), status: 'open', thread_slug: 'general-discussion' },
+    { id: '3', thread_title: 'Harassment in DMs', reporter_username: 'user_4821', reason: 'Harassment', created_at: new Date(Date.now() - 86400000).toISOString(), status: 'open', thread_slug: 'support' },
+    { id: '4', thread_title: 'Bug report with false info', reporter_username: 'dev_lead', reason: 'Misinformation', created_at: new Date(Date.now() - 86400000 * 2).toISOString(), status: 'open', thread_slug: 'bug-reports' },
+    { id: '5', thread_title: 'Duplicate account warning', reporter_username: 'system', reason: 'Duplicate accounts', created_at: new Date(Date.now() - 86400000 * 3).toISOString(), status: 'resolved', thread_slug: 'general-discussion' },
+  ],
+  groups: [
+    { id: '1', name: 'Administrators', description: 'Full system access', member_count: 5, color: '#ffcf5c' },
+    { id: '2', name: 'Moderators', description: 'Content moderation team', member_count: 12, color: '#b39dff' },
+    { id: '3', name: 'Premium', description: 'Premium license holders', member_count: 347, color: '#00d4ff' },
+    { id: '4', name: 'Users', description: 'Registered users', member_count: 2483, color: '#7f9bb0' },
+    { id: '5', name: 'Developers', description: 'Internal development team', member_count: 8, color: '#3ef0a3' },
+  ],
+  permissions: {
+    '1': [
+      { id: 'p1', name: 'admin.access', description: 'Access admin panel', module: 'Core' },
+      { id: 'p2', name: 'admin.users.manage', description: 'Manage user accounts', module: 'Users' },
+      { id: 'p3', name: 'admin.reports.resolve', description: 'Resolve reports', module: 'Moderation' },
+      { id: 'p4', name: 'admin.bans.create', description: 'Create bans', module: 'Moderation' },
+      { id: 'p5', name: 'forum.threads.delete', description: 'Delete threads', module: 'Forum' },
+      { id: 'p6', name: 'forum.posts.delete', description: 'Delete posts', module: 'Forum' },
+    ],
+    '2': [
+      { id: 'p7', name: 'admin.reports.resolve', description: 'Resolve reports', module: 'Moderation' },
+      { id: 'p8', name: 'admin.bans.create', description: 'Create bans', module: 'Moderation' },
+      { id: 'p9', name: 'forum.threads.lock', description: 'Lock threads', module: 'Forum' },
+      { id: 'p10', name: 'forum.posts.edit', description: 'Edit any post', module: 'Forum' },
+    ],
+    '3': [
+      { id: 'p11', name: 'store.access', description: 'Access product store', module: 'Store' },
+      { id: 'p12', name: 'forum.attachments', description: 'Upload attachments', module: 'Forum' },
+    ],
+    '4': [
+      { id: 'p13', name: 'forum.posts.create', description: 'Create posts', module: 'Forum' },
+      { id: 'p14', name: 'forum.threads.create', description: 'Create threads', module: 'Forum' },
+    ],
+    '5': [
+      { id: 'p15', name: 'admin.access', description: 'Access admin panel', module: 'Core' },
+      { id: 'p16', name: 'admin.logs.view', description: 'View system logs', module: 'System' },
+      { id: 'p17', name: 'admin.stats.view', description: 'View analytics', module: 'System' },
+    ],
+  },
+  bans: [
+    { id: '1', username: 'spam_bot_42', reason: 'Advertising spam', created_at: new Date(Date.now() - 86400000 * 1).toISOString(), expires_at: new Date(Date.now() + 86400000 * 30).toISOString(), banned_by: 'admin' },
+    { id: '2', username: 'toxic_player_x', reason: 'Harassment / toxic behavior', created_at: new Date(Date.now() - 86400000 * 5).toISOString(), expires_at: new Date(Date.now() + 86400000 * 60).toISOString(), banned_by: 'mod_01' },
+    { id: '3', username: 'cheater_alpha', reason: 'Cheating / unauthorized software', created_at: new Date(Date.now() - 86400000 * 10).toISOString(), expires_at: null, banned_by: 'admin' },
+    { id: '4', username: 'alt_account_99', reason: 'Evading previous ban', created_at: new Date(Date.now() - 86400000 * 3).toISOString(), expires_at: new Date(Date.now() + 86400000 * 90).toISOString(), banned_by: 'mod_02' },
+    { id: '5', username: 'link_dropper', reason: 'Phishing links', created_at: new Date(Date.now() - 86400000 * 7).toISOString(), expires_at: null, banned_by: 'admin' },
+  ],
+  modLog: [
+    { id: '1', action: 'ban', moderator: 'admin', target: 'cheater_alpha', details: 'Permanent ban — cheating', created_at: new Date(Date.now() - 3600000).toISOString() },
+    { id: '2', action: 'resolve_report', moderator: 'mod_01', target: 'thread_42', details: 'Resolved report #12 — warning issued', created_at: new Date(Date.now() - 3600000 * 3).toISOString() },
+    { id: '3', action: 'delete_thread', moderator: 'admin', target: 'thread_39', details: 'Deleted spam thread', created_at: new Date(Date.now() - 3600000 * 6).toISOString() },
+    { id: '4', action: 'lock_thread', moderator: 'mod_02', target: 'thread_35', details: 'Locked thread — resolved', created_at: new Date(Date.now() - 86400000).toISOString() },
+    { id: '5', action: 'unban', moderator: 'admin', target: 'appealed_user', details: 'Appeal accepted — unbanned', created_at: new Date(Date.now() - 86400000 * 1.5).toISOString() },
+    { id: '6', action: 'warn', moderator: 'mod_01', target: 'user_553', details: 'Warning — inappropriate language', created_at: new Date(Date.now() - 86400000 * 2).toISOString() },
+    { id: '7', action: 'ban', moderator: 'admin', target: 'spam_bot_42', details: '30 day ban — spam', created_at: new Date(Date.now() - 86400000 * 3).toISOString() },
+  ],
+};
+
+// ── State ─────────────────────────────────────────────────
+var state = {
+  // Auth
+  checking: true,
+  authed: false,
+  admin: false,
+  username: '',
+  userId: null,
+
+  // Stats
+  stats: null,
+  bansCount: 0,
+
+  // Tabs
+  activeTab: 'reports',
+
+  // Reports
+  reports: [],
+  reportsPage: 1,
+  reportsTotal: 0,
+  reportsLoading: false,
+  reportsError: false,
+
+  // Groups
+  groups: [],
+  groupsLoading: false,
+  expandedGroup: null,
+  groupPermissions: {},
+  groupsError: false,
+
+  // Bans
+  bans: [],
+  bansPage: 1,
+  bansTotal: 0,
+  bansLoading: false,
+  bansError: false,
+
+  // Mod log
+  modLog: [],
+  modLogPage: 1,
+  modLogTotal: 0,
+  modLogLoading: false,
+  modLogError: false,
+};
+
+function setState(update) {
+  for (var k in update) {
+    if (update.hasOwnProperty(k)) state[k] = update[k];
+  }
+  render();
+}
+
+// ── Auth ──────────────────────────────────────────────────
+function checkAuth() {
+  var token = getToken();
+  if (!token) {
+    setState({ checking: false, authed: false, admin: false });
+    return;
+  }
+
+  var payload = decodeToken(token);
+  if (!payload) {
+    setState({ checking: false, authed: false, admin: false });
+    return;
+  }
+
+  // Check expiration
+  if (payload.exp && payload.exp * 1000 < Date.now()) {
+    setState({ checking: false, authed: false, admin: false });
+    return;
+  }
+
+  setState({
+    checking: false,
+    authed: true,
+    admin: payload.role === 'admin',
+    username: payload.username || '',
+    userId: payload.sub || null,
+  });
+}
+
+// ── Data fetching ────────────────────────────────────────
+async function fetchStats() {
+  var data = await apiGet('/api/admin/stats');
+  if (data && data._error) {
+    if (data._error === 401 || data._error === 403) {
+      setState({ admin: false });
+      return;
+    }
+  }
+  setState({ stats: data || MOCK.stats });
+
+  // Also fetch bans count
+  var bansData = await apiGet('/api/admin/bans?page=1');
+  if (bansData && bansData.total != null) {
+    setState({ bansCount: bansData.total });
+  } else {
+    setState({ bansCount: MOCK.bans.length });
+  }
+}
+
+async function fetchReports(page) {
+  page = page || state.reportsPage;
+  setState({ reportsLoading: true, reportsError: false });
+  var data = await apiGet('/api/admin/reports?status=open&page=' + page);
+  if (data && data._error) {
+    if (data._error === 403) { setState({ admin: false }); return; }
+  }
+  if (data && data.reports) {
+    setState({ reports: data.reports, reportsTotal: data.total || data.reports.length, reportsPage: page, reportsLoading: false });
+  } else {
+    setState({ reports: MOCK.reports, reportsTotal: MOCK.reports.length, reportsPage: page, reportsLoading: false, reportsError: true });
+  }
+}
+
+async function fetchGroups() {
+  setState({ groupsLoading: true, groupsError: false });
+  var data = await apiGet('/api/admin/groups');
+  if (data && data._error) {
+    if (data._error === 403) { setState({ admin: false }); return; }
+  }
+  if (data && data.length) {
+    setState({ groups: data, groupsLoading: false });
+  } else {
+    setState({ groups: MOCK.groups, groupsLoading: false, groupsError: true });
+  }
+}
+
+async function fetchGroupPermissions(groupId) {
+  if (state.groupPermissions[groupId]) return; // already cached
+  var data = await apiGet('/api/admin/groups/' + groupId + '/permissions');
+  if (data && data._error) {
+    if (data._error === 403) { setState({ admin: false }); return; }
+  }
+  var perms = {};
+  perms[groupId] = data && data.length ? data : (MOCK.permissions[groupId] || []);
+  setState({ groupPermissions: Object.assign({}, state.groupPermissions, perms) });
+}
+
+async function fetchBans(page) {
+  page = page || state.bansPage;
+  setState({ bansLoading: true, bansError: false });
+  var data = await apiGet('/api/admin/bans?page=' + page);
+  if (data && data._error) {
+    if (data._error === 403) { setState({ admin: false }); return; }
+  }
+  if (data && data.bans) {
+    setState({ bans: data.bans, bansTotal: data.total || data.bans.length, bansPage: page, bansLoading: false });
+  } else {
+    setState({ bans: MOCK.bans, bansTotal: MOCK.bans.length, bansPage: page, bansLoading: false, bansError: true });
+  }
+}
+
+async function fetchModLog(page) {
+  page = page || state.modLogPage;
+  setState({ modLogLoading: true, modLogError: false });
+  var data = await apiGet('/api/admin/mod-log?page=' + page);
+  if (data && data._error) {
+    if (data._error === 403) { setState({ admin: false }); return; }
+  }
+  if (data && data.log) {
+    setState({ modLog: data.log, modLogTotal: data.total || data.log.length, modLogPage: page, modLogLoading: false });
+  } else {
+    setState({ modLog: MOCK.modLog, modLogTotal: MOCK.modLog.length, modLogPage: page, modLogLoading: false, modLogError: true });
+  }
+}
+
+// ── Actions ──────────────────────────────────────────────
+async function resolveReport(id) {
+  var btn = document.getElementById('resolveBtn_' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  var data = await apiPost('/api/admin/reports/' + id + '/resolve', {});
+  if (data && data._error === 403) { setState({ admin: false }); return; }
+  await fetchReports(state.reportsPage);
+}
+
+async function unbanUser(id) {
+  var btn = document.getElementById('unbanBtn_' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  var data = await apiPost('/api/admin/users/' + id + '/unban', {});
+  if (data && data._error === 403) { setState({ admin: false }); return; }
+  await fetchBans(state.bansPage);
+}
+
+function expandGroup(id) {
+  if (state.expandedGroup === id) {
+    setState({ expandedGroup: null });
+  } else {
+    setState({ expandedGroup: id });
+    fetchGroupPermissions(id);
+  }
+}
+
+function switchTab(name) {
+  setState({ activeTab: name });
+  // Fetch data on first load
+  if (name === 'reports' && state.reports.length === 0) fetchReports(1);
+  if (name === 'groups' && state.groups.length === 0) fetchGroups();
+  if (name === 'bans' && state.bans.length === 0) fetchBans(1);
+  if (name === 'modLog' && state.modLog.length === 0) fetchModLog(1);
+}
+
+// ── Render ────────────────────────────────────────────────
+function render() {
+  var app = document.getElementById('app');
+
+  if (state.checking) {
+    renderLoading(app);
+    return;
+  }
+
+  if (!state.authed) {
+    renderNotLoggedIn(app);
+    return;
+  }
+
+  if (!state.admin) {
+    renderAccessDenied(app);
+    return;
+  }
+
+  renderDashboard(app);
+}
+
+function renderLoading(root) {
+  root.innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;">' +
+      '<div style="width:24px;height:24px;border:2px solid rgba(0,212,255,0.2);border-top-color:#00d4ff;border-radius:50%;animation:ad-spin 0.6s linear infinite;"></div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:13px;color:#4f6478;letter-spacing:1px;">CHECKING ACCESS…</div>' +
+    '</div>';
+}
+
+function renderNotLoggedIn(root) {
+  root.innerHTML =
+    '<div style="position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(130% 80% at 50% -10%,#0d1622 0%,#0a0a0f 46%,#060709 100%);">' +
+      '<div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);pointer-events:none;"></div>' +
+      '<div style="position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.18) 3px);background-size:100% 6px;animation:ad-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.5;"></div>' +
+      '<div style="position:fixed;top:-160px;left:50%;width:720px;height:360px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,0.14),transparent 70%);filter:blur(30px);pointer-events:none;"></div>' +
+      '<div style="position:relative;z-index:1;text-align:center;">' +
+        '<div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:20px;">' +
+          '<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:7px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 14px -2px rgba(0,212,255,0.5);">' +
+            '<div style="width:10px;height:10px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 8px #00d4ff;"></div>' +
+          '</div>' +
+          '<div style="font-size:22px;font-weight:700;letter-spacing:3px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,0.5);">AETHER</div>' +
+        '</div>' +
+        '<div style="font-size:28px;font-weight:700;color:#4f6478;margin-bottom:8px;">Admin Panel</div>' +
+        '<div style="font-size:15px;color:#7f9bb0;margin-bottom:24px;">Please log in to access the admin panel.</div>' +
+        '<a href="/register" style="display:inline-block;padding:12px 28px;border-radius:10px;background:linear-gradient(180deg,#1ee0ff,#00a6cf);color:#03121a;font-weight:700;font-size:14px;letter-spacing:1px;text-decoration:none;">SIGN IN</a>' +
+        '<div style="margin-top:14px;"><a href="/forum" style="font-size:13px;color:#4f6478;text-decoration:none;">← Back to Forum</a></div>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderAccessDenied(root) {
+  root.innerHTML =
+    '<div style="position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(130% 80% at 50% -10%,#0d1622 0%,#0a0a0f 46%,#060709 100%);">' +
+      '<div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);pointer-events:none;"></div>' +
+      '<div style="position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.18) 3px);background-size:100% 6px;animation:ad-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.5;"></div>' +
+      '<div style="position:fixed;top:-160px;left:50%;width:720px;height:360px;transform:translateX(-50%);background:radial-gradient(circle,rgba(255,107,107,0.12),transparent 70%);filter:blur(30px);pointer-events:none;"></div>' +
+      '<div style="position:relative;z-index:1;text-align:center;">' +
+        '<div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:20px;">' +
+          '<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:7px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 14px -2px rgba(0,212,255,0.5);">' +
+            '<div style="width:10px;height:10px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 8px #00d4ff;"></div>' +
+          '</div>' +
+          '<div style="font-size:22px;font-weight:700;letter-spacing:3px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,0.5);">AETHER</div>' +
+        '</div>' +
+        '<div style="font-size:48px;font-weight:700;color:#ff6b6b;margin-bottom:8px;text-shadow:0 0 20px rgba(255,107,107,0.4);">ACCESS DENIED</div>' +
+        '<div style="font-size:15px;color:#7f9bb0;margin-bottom:24px;">You do not have administrator privileges.</div>' +
+        '<a href="/forum" style="display:inline-block;padding:12px 28px;border-radius:10px;border:1px solid rgba(0,212,255,0.3);color:#9fc6dc;font-weight:600;font-size:14px;letter-spacing:1px;text-decoration:none;">← BACK TO FORUM</a>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderDashboard(root) {
+  var s = state;
+  var tabs = [
+    { id: 'reports', label: 'Reports', count: s.stats ? s.stats.open_reports : 0 },
+    { id: 'groups', label: 'Groups', count: s.groups.length || null },
+    { id: 'bans', label: 'Bans', count: s.bansCount || null },
+    { id: 'modLog', label: 'Mod Log', count: null },
+  ];
+
+  var tabHtml = tabs.map(function (t) {
+    var active = t.id === s.activeTab;
+    var countBadge = t.count != null ? '<span style="margin-left:6px;padding:1px 7px;border-radius:999px;font-size:9px;font-weight:700;font-family:\'JetBrains Mono\',monospace;background:' + (active ? 'rgba(3,18,26,0.3)' : 'rgba(0,212,255,0.1)') + ';color:' + (active ? '#03121a' : '#4f6478') + ';">' + fmtCount(t.count) + '</span>' : '';
+    return '<button onclick="switchTab(\'' + t.id + '\')" style="display:flex;align-items:center;padding:10px 18px;border-radius:10px;cursor:pointer;white-space:nowrap;font-size:13px;font-weight:600;letter-spacing:0.8px;color:' + (active ? '#03121a' : '#9fc6dc') + ';background:' + (active ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(0,212,255,0.06)') + ';border:1px solid ' + (active ? 'transparent' : 'rgba(0,212,255,0.18)') + ';transition:all 0.15s;">' + t.label + countBadge + '</button>';
+  }).join('');
+
+  root.innerHTML =
+    '<div style="position:relative;min-height:100vh;font-family:\'Space Grotesk\',system-ui,sans-serif;background:radial-gradient(130% 80% at 50% -10%,#0d1622 0%,#0a0a0f 46%,#060709 100%);color:#c7d6e2;">' +
+      '<div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);pointer-events:none;"></div>' +
+      '<div style="position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.18) 3px);background-size:100% 6px;animation:ad-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.5;"></div>' +
+      '<div style="position:fixed;top:-160px;left:50%;width:720px;height:360px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,0.14),transparent 70%);filter:blur(30px);pointer-events:none;"></div>' +
+      '<div style="position:relative;z-index:1;max-width:1160px;margin:0 auto;padding:20px 22px 60px;">' +
+
+        // TOP BAR
+        '<nav style="display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px;padding:12px 16px;border-radius:14px;background:linear-gradient(180deg,rgba(18,24,33,0.82),rgba(10,13,18,0.85));backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid rgba(0,212,255,0.22);box-shadow:0 0 50px -16px rgba(0,212,255,0.4),inset 0 1px 0 rgba(255,255,255,0.04);">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<a href="/" style="display:flex;align-items:center;gap:8px;text-decoration:none;">' +
+              '<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:8px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 14px -2px rgba(0,212,255,0.5),inset 0 0 8px rgba(0,212,255,0.18);">' +
+                '<div style="width:10px;height:10px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 8px #00d4ff;"></div>' +
+              '</div>' +
+              '<div style="font-size:15px;font-weight:700;letter-spacing:2.5px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,0.5);">AETHER</div>' +
+            '</a>' +
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1.5px;color:#b39dff;padding:3px 8px;border:1px solid rgba(139,92,246,0.5);border-radius:6px;background:rgba(139,92,246,0.08);">ADMIN</div>' +
+          '</div>' +
+          '<a href="/forum" style="margin-left:auto;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;color:#7f9bb0;text-decoration:none;border:1px solid rgba(0,212,255,0.15);transition:all 0.15s;" onmouseenter="this.style.color=\'#cdeefb\';this.style.borderColor=\'rgba(0,212,255,0.4)\'" onmouseleave="this.style.color=\'#7f9bb0\';this.style.borderColor=\'rgba(0,212,255,0.15)\'">← Back to Forum</a>' +
+        '</nav>' +
+
+        // STATS ROW
+        '<div id="statsRow" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-top:18px;"></div>' +
+
+        // TAB BAR
+        '<div id="tabBar" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;">' + tabHtml + '</div>' +
+
+        // TAB CONTENT
+        '<div id="tabContent" style="margin-top:16px;"></div>' +
+
+      '</div>' +
+    '</div>';
+
+  // Render stats
+  renderStatsRow();
+  // Render active tab
+  renderTabContent();
+}
+
+function renderStatsRow() {
+  var container = document.getElementById('statsRow');
+  if (!container) return;
+
+  var s = state;
+  var stats = s.stats || MOCK.stats;
+
+  var items = [
+    { value: fmtCount(stats.total_users), label: 'TOTAL USERS', color: '#00d4ff' },
+    { value: fmtCount(stats.total_threads), label: 'THREADS', color: '#b39dff' },
+    { value: fmtCount(stats.total_posts), label: 'POSTS', color: '#3ef0a3' },
+    { value: fmtCount(stats.open_reports), label: 'OPEN REPORTS', color: '#ff8b6b' },
+    { value: fmtCount(s.bansCount || 0), label: 'ACTIVE BANS', color: '#ffcf5c' },
+  ];
+
+  container.innerHTML = items.map(function (it) {
+    return '<div style="padding:14px 16px;border-radius:12px;background:linear-gradient(180deg,rgba(16,22,30,0.7),rgba(10,13,18,0.7));border:1px solid rgba(0,212,255,0.14);display:flex;align-items:center;gap:12px;">' +
+      '<div style="width:8px;height:8px;border-radius:50%;background:' + it.color + ';box-shadow:0 0 10px ' + it.color + ';flex:none;"></div>' +
+      '<div><div style="font-family:\'JetBrains Mono\',monospace;font-size:20px;font-weight:700;color:#e8f4ff;line-height:1;">' + it.value + '</div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1.2px;color:#4f6478;margin-top:4px;">' + it.label + '</div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderTabContent() {
+  var container = document.getElementById('tabContent');
+  if (!container) return;
+
+  // Clear container and render based on active tab
+  container.innerHTML = '';
+
+  switch (state.activeTab) {
+    case 'reports': renderReportsPanel(container); break;
+    case 'groups': renderGroupsPanel(container); break;
+    case 'bans': renderBansPanel(container); break;
+    case 'modLog': renderModLogPanel(container); break;
+  }
+}
+
+// ── Reports Tab ──────────────────────────────────────────
+function renderReportsPanel(container) {
+  if (state.reportsLoading) {
+    renderPanelLoader(container, 'LOADING REPORTS…');
+    return;
+  }
+
+  // Panel header
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;';
+  title.textContent = 'OPEN REPORTS · ' + state.reportsTotal + ' TOTAL';
+  header.appendChild(title);
+
+  var refreshBtn = document.createElement('button');
+  refreshBtn.style.cssText = 'padding:6px 14px;border-radius:7px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#9fc6dc;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.5px;';
+  refreshBtn.textContent = '↻ REFRESH';
+  refreshBtn.onclick = function () { fetchReports(state.reportsPage); };
+  header.appendChild(refreshBtn);
+
+  container.appendChild(header);
+
+  // Table
+  var table = document.createElement('div');
+  table.style.cssText = 'border-radius:14px;overflow-x:auto;overflow-y:hidden;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid rgba(0,212,255,0.16);box-shadow:0 20px 60px -30px rgba(0,0,0,0.9);';
+
+  if (state.reports.length === 0) {
+    table.innerHTML = '<div style="padding:40px 18px;text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#4f6478;">No open reports.</div>';
+    container.appendChild(table);
+    return;
+  }
+
+  // Inner wrapper for grid so horizontal scroll works
+  var tableInner = document.createElement('div');
+  tableInner.style.cssText = 'min-width:680px;';
+
+  // Headers row
+  var headerRow = document.createElement('div');
+  headerRow.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1.5fr 1fr 1fr 80px;padding:11px 16px;border-bottom:1px solid rgba(0,212,255,0.12);font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1.5px;color:#4f6478;gap:10px;';
+  var hLabels = ['THREAD / POST', 'REPORTER', 'REASON', 'DATE', 'STATUS', ''];
+  hLabels.forEach(function (label) {
+    var el = document.createElement('div');
+    el.textContent = label;
+    headerRow.appendChild(el);
+  });
+  tableInner.appendChild(headerRow);
+
+  // Data rows
+  state.reports.forEach(function (r) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1.5fr 1fr 1fr 80px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;gap:10px;font-size:13px;transition:background 0.15s;';
+    row.onmouseenter = function () { row.style.background = 'rgba(0,212,255,0.04)'; };
+    row.onmouseleave = function () { row.style.background = 'transparent'; };
+
+    // Thread title
+    var titleCell = document.createElement('div');
+    titleCell.style.cssText = 'color:#e8f4ff;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    titleCell.textContent = r.thread_title || '—';
+    row.appendChild(titleCell);
+
+    // Reporter
+    var reporterCell = document.createElement('div');
+    reporterCell.style.cssText = 'color:#9fc6dc;';
+    reporterCell.textContent = r.reporter_username || '—';
+    row.appendChild(reporterCell);
+
+    // Reason
+    var reasonCell = document.createElement('div');
+    reasonCell.style.cssText = 'color:#7f9bb0;font-size:12px;';
+    reasonCell.textContent = r.reason || '—';
+    row.appendChild(reasonCell);
+
+    // Date
+    var dateCell = document.createElement('div');
+    dateCell.style.cssText = 'color:#54697b;font-family:\'JetBrains Mono\',monospace;font-size:11px;';
+    dateCell.textContent = timeAgo(r.created_at);
+    row.appendChild(dateCell);
+
+    // Status
+    var statusCell = document.createElement('div');
+    var isOpen = r.status === 'open';
+    statusCell.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;letter-spacing:0.5px;padding:3px 8px;border-radius:5px;display:inline-block;align-self:center;justify-self:start;color:' + (isOpen ? '#ff8b6b' : '#3ef0a3') + ';background:' + (isOpen ? 'rgba(255,139,107,0.1)' : 'rgba(62,240,163,0.1)') + ';border:1px solid ' + (isOpen ? 'rgba(255,139,107,0.3)' : 'rgba(62,240,163,0.3)') + ';';
+    statusCell.textContent = isOpen ? 'OPEN' : 'RESOLVED';
+    row.appendChild(statusCell);
+
+    // Action button
+    var actionCell = document.createElement('div');
+    if (isOpen) {
+      var btn = document.createElement('button');
+      btn.id = 'resolveBtn_' + r.id;
+      btn.style.cssText = 'padding:6px 12px;border-radius:7px;border:none;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:0.5px;color:#03121a;background:linear-gradient(180deg,#3ef0a3,#1f9e72);transition:all 0.15s;white-space:nowrap;';
+      btn.textContent = 'RESOLVE';
+      btn.onclick = function (id) { return function () { resolveReport(id); }; }(r.id);
+      actionCell.appendChild(btn);
+    }
+    row.appendChild(actionCell);
+
+    tableInner.appendChild(row);
+  });
+
+  table.appendChild(tableInner);
+  container.appendChild(table);
+
+  // Pagination
+  renderPagination(container, state.reportsPage, state.reportsTotal, function (p) { fetchReports(p); });
+}
+
+// ── Groups Tab ──────────────────────────────────────────
+function renderGroupsPanel(container) {
+  if (state.groupsLoading) {
+    renderPanelLoader(container, 'LOADING GROUPS…');
+    return;
+  }
+
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;';
+  title.textContent = 'USER GROUPS · ' + state.groups.length + ' GROUPS';
+  header.appendChild(title);
+
+  var refreshBtn = document.createElement('button');
+  refreshBtn.style.cssText = 'padding:6px 14px;border-radius:7px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#9fc6dc;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.5px;';
+  refreshBtn.textContent = '↻ REFRESH';
+  refreshBtn.onclick = function () { fetchGroups(); };
+  header.appendChild(refreshBtn);
+
+  container.appendChild(header);
+
+  if (state.groups.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'padding:40px 18px;text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#4f6478;';
+    empty.textContent = 'No groups found.';
+    container.appendChild(empty);
+    return;
+  }
+
+  // Groups list
+  state.groups.forEach(function (g) {
+    var isExpanded = state.expandedGroup === g.id;
+    var color = g.color || '#00d4ff';
+
+    // Group card
+    var card = document.createElement('div');
+    card.style.cssText = 'border-radius:12px;overflow:hidden;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid ' + (isExpanded ? 'rgba(0,212,255,0.35)' : 'rgba(0,212,255,0.16)') + ';box-shadow:0 8px 30px -16px rgba(0,0,0,0.7);margin-bottom:10px;transition:border-color 0.2s;animation:ad-rise 0.2s ease both;';
+
+    // Group header (clickable)
+    var headerRow = document.createElement('div');
+    headerRow.style.cssText = 'display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;transition:background 0.15s;';
+    headerRow.onmouseenter = function () { headerRow.style.background = 'rgba(0,212,255,0.04)'; };
+    headerRow.onmouseleave = function () { headerRow.style.background = 'transparent'; };
+    headerRow.onclick = function (id) { return function () { expandGroup(id); }; }(g.id);
+
+    // Color indicator
+    var indicator = document.createElement('div');
+    indicator.style.cssText = 'width:4px;height:28px;flex:none;border-radius:4px;background:' + color + ';box-shadow:0 0 8px ' + color + ';';
+    headerRow.appendChild(indicator);
+
+    // Group name
+    var nameEl = document.createElement('div');
+    nameEl.style.cssText = 'flex:1;min-width:0;';
+    var nameStrong = document.createElement('div');
+    nameStrong.style.cssText = 'font-size:15px;font-weight:600;color:#e8f4ff;';
+    nameStrong.textContent = g.name;
+    nameEl.appendChild(nameStrong);
+    var descEl = document.createElement('div');
+    descEl.style.cssText = 'font-size:12px;color:#54697b;margin-top:2px;';
+    descEl.textContent = g.description || '';
+    nameEl.appendChild(descEl);
+    headerRow.appendChild(nameEl);
+
+    // Member count
+    var membersEl = document.createElement('div');
+    membersEl.style.cssText = 'text-align:right;';
+    var memNum = document.createElement('div');
+    memNum.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:16px;font-weight:700;color:#9fc6dc;';
+    memNum.textContent = fmtCount(g.member_count || 0);
+    membersEl.appendChild(memNum);
+    var memLabel = document.createElement('div');
+    memLabel.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1px;color:#44586a;';
+    memLabel.textContent = 'MEMBERS';
+    membersEl.appendChild(memLabel);
+    headerRow.appendChild(membersEl);
+
+    // Expand arrow
+    var arrow = document.createElement('div');
+    arrow.style.cssText = 'transition:transform 0.2s;transform:rotate(' + (isExpanded ? '180' : '0') + 'deg);color:#4f6478;font-size:14px;';
+    arrow.textContent = '▾';
+    headerRow.appendChild(arrow);
+
+    card.appendChild(headerRow);
+
+    // Expanded permissions
+    if (isExpanded) {
+      var expandDiv = document.createElement('div');
+      expandDiv.className = 'ad-row-expand';
+      expandDiv.style.cssText = 'padding:0 16px 14px;border-top:1px solid rgba(0,212,255,0.1);';
+
+      var perms = state.groupPermissions[g.id];
+      if (!perms) {
+        // Loading permissions
+        var loading = document.createElement('div');
+        loading.style.cssText = 'padding:16px 0;text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#4f6478;';
+        loading.textContent = 'Loading permissions…';
+        expandDiv.appendChild(loading);
+      } else if (perms.length === 0) {
+        var noPerms = document.createElement('div');
+        noPerms.style.cssText = 'padding:16px 0;text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#4f6478;';
+        noPerms.textContent = 'No specific permissions assigned.';
+        expandDiv.appendChild(noPerms);
+      } else {
+        var permsTitle = document.createElement('div');
+        permsTitle.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1.5px;color:#b39dff;padding:12px 0 8px;';
+        permsTitle.textContent = 'PERMISSIONS';
+        expandDiv.appendChild(permsTitle);
+
+        perms.forEach(function (p) {
+          var pRow = document.createElement('div');
+          pRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;background:rgba(0,212,255,0.04);margin-bottom:4px;';
+
+          var pName = document.createElement('div');
+          pName.style.cssText = 'flex:1;font-family:\'JetBrains Mono\',monospace;font-size:11.5px;color:#9fc6dc;';
+          pName.textContent = p.name || '—';
+          pRow.appendChild(pName);
+
+          var pDesc = document.createElement('div');
+          pDesc.style.cssText = 'flex:1;font-size:12px;color:#54697b;';
+          pDesc.textContent = p.description || '';
+          pRow.appendChild(pDesc);
+
+          var pModule = document.createElement('div');
+          pModule.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:0.5px;padding:2px 8px;border-radius:5px;color:#3ef0a3;background:rgba(62,240,163,0.1);border:1px solid rgba(62,240,163,0.25);';
+          pModule.textContent = p.module || '';
+          pRow.appendChild(pModule);
+
+          expandDiv.appendChild(pRow);
+        });
+      }
+
+      card.appendChild(expandDiv);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+// ── Bans Tab ─────────────────────────────────────────────
+function renderBansPanel(container) {
+  if (state.bansLoading) {
+    renderPanelLoader(container, 'LOADING BANS…');
+    return;
+  }
+
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;';
+  title.textContent = 'ACTIVE BANS · ' + state.bansTotal + ' TOTAL';
+  header.appendChild(title);
+
+  var refreshBtn = document.createElement('button');
+  refreshBtn.style.cssText = 'padding:6px 14px;border-radius:7px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#9fc6dc;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.5px;';
+  refreshBtn.textContent = '↻ REFRESH';
+  refreshBtn.onclick = function () { fetchBans(state.bansPage); };
+  header.appendChild(refreshBtn);
+
+  container.appendChild(header);
+
+  // Table
+  var table = document.createElement('div');
+  table.style.cssText = 'border-radius:14px;overflow-x:auto;overflow-y:hidden;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid rgba(0,212,255,0.16);box-shadow:0 20px 60px -30px rgba(0,0,0,0.9);';
+
+  if (state.bans.length === 0) {
+    table.innerHTML = '<div style="padding:40px 18px;text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#4f6478;">No active bans.</div>';
+    container.appendChild(table);
+    return;
+  }
+
+  // Inner wrapper for horizontal scroll
+  var tableInner = document.createElement('div');
+  tableInner.style.cssText = 'min-width:600px;';
+
+  // Headers
+  var headerRow = document.createElement('div');
+  headerRow.style.cssText = 'display:grid;grid-template-columns:1.5fr 2fr 1fr 1.5fr 110px;padding:11px 16px;border-bottom:1px solid rgba(0,212,255,0.12);font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1.5px;color:#4f6478;gap:10px;';
+  ['USER', 'REASON', 'DATE', 'EXPIRES', ''].forEach(function (label) {
+    var el = document.createElement('div');
+    el.textContent = label;
+    headerRow.appendChild(el);
+  });
+  tableInner.appendChild(headerRow);
+
+  // Data rows
+  state.bans.forEach(function (b) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:1.5fr 2fr 1fr 1.5fr 110px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;gap:10px;font-size:13px;transition:background 0.15s;';
+    row.onmouseenter = function () { row.style.background = 'rgba(0,212,255,0.04)'; };
+    row.onmouseleave = function () { row.style.background = 'transparent'; };
+
+    // Username
+    var userCell = document.createElement('div');
+    userCell.style.cssText = 'color:#ff8b6b;font-weight:600;';
+    userCell.textContent = b.username || '—';
+    row.appendChild(userCell);
+
+    // Reason
+    var reasonCell = document.createElement('div');
+    reasonCell.style.cssText = 'color:#7f9bb0;font-size:12px;';
+    reasonCell.textContent = b.reason || '—';
+    row.appendChild(reasonCell);
+
+    // Date
+    var dateCell = document.createElement('div');
+    dateCell.style.cssText = 'color:#54697b;font-family:\'JetBrains Mono\',monospace;font-size:11px;';
+    dateCell.textContent = timeAgo(b.created_at);
+    row.appendChild(dateCell);
+
+    // Expires
+    var expiresCell = document.createElement('div');
+    expiresCell.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:11px;';
+    if (b.expires_at) {
+      var isExpired = new Date(b.expires_at) < new Date();
+      expiresCell.style.color = isExpired ? '#3ef0a3' : '#ffcf5c';
+      expiresCell.textContent = isExpired ? 'EXPIRED' : timeAgo(b.expires_at);
+    } else {
+      expiresCell.style.color = '#ff6b6b';
+      expiresCell.textContent = 'PERMANENT';
+    }
+    row.appendChild(expiresCell);
+
+    // Unban button
+    var actionCell = document.createElement('div');
+    var btn = document.createElement('button');
+    btn.id = 'unbanBtn_' + b.id;
+    btn.style.cssText = 'padding:6px 12px;border-radius:7px;border:1px solid rgba(255,107,107,0.35);cursor:pointer;font-size:10px;font-weight:700;letter-spacing:0.5px;color:#ff8b6b;background:rgba(255,107,107,0.1);transition:all 0.15s;white-space:nowrap;';
+    btn.textContent = 'UNBAN';
+    btn.onclick = function (id) { return function () { unbanUser(id); }; }(b.id);
+    actionCell.appendChild(btn);
+    row.appendChild(actionCell);
+
+    tableInner.appendChild(row);
+  });
+
+  table.appendChild(tableInner);
+  container.appendChild(table);
+
+  // Pagination
+  renderPagination(container, state.bansPage, state.bansTotal, function (p) { fetchBans(p); });
+}
+
+// ── Mod Log Tab ──────────────────────────────────────────
+function renderModLogPanel(container) {
+  if (state.modLogLoading) {
+    renderPanelLoader(container, 'LOADING MOD LOG…');
+    return;
+  }
+
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;';
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;';
+  title.textContent = 'MODERATION LOG · ' + state.modLogTotal + ' ENTRIES';
+  header.appendChild(title);
+
+  var refreshBtn = document.createElement('button');
+  refreshBtn.style.cssText = 'padding:6px 14px;border-radius:7px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#9fc6dc;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.5px;';
+  refreshBtn.textContent = '↻ REFRESH';
+  refreshBtn.onclick = function () { fetchModLog(state.modLogPage); };
+  header.appendChild(refreshBtn);
+
+  container.appendChild(header);
+
+  if (state.modLog.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'padding:40px 18px;text-align:center;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#4f6478;border-radius:14px;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid rgba(0,212,255,0.16);';
+    empty.textContent = 'No moderation log entries.';
+    container.appendChild(empty);
+    return;
+  }
+
+  // Timeline container
+  var timeline = document.createElement('div');
+  timeline.style.cssText = 'border-radius:14px;overflow-x:auto;overflow-y:hidden;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid rgba(0,212,255,0.16);box-shadow:0 20px 60px -30px rgba(0,0,0,0.9);padding:6px 0;';
+
+  state.modLog.forEach(function (entry, idx) {
+    var actionColors = {
+      ban: { color: '#ff6b6b', bg: 'rgba(255,107,107,0.12)', border: 'rgba(255,107,107,0.3)', icon: '!' },
+      unban: { color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.3)', icon: '✓' },
+      resolve_report: { color: '#00d4ff', bg: 'rgba(0,212,255,0.12)', border: 'rgba(0,212,255,0.3)', icon: '◆' },
+      delete_thread: { color: '#ff8b6b', bg: 'rgba(255,139,107,0.12)', border: 'rgba(255,139,107,0.3)', icon: '✕' },
+      delete_post: { color: '#ff8b6b', bg: 'rgba(255,139,107,0.12)', border: 'rgba(255,139,107,0.3)', icon: '✕' },
+      lock_thread: { color: '#b39dff', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)', icon: '◈' },
+      warn: { color: '#ffcf5c', bg: 'rgba(255,207,92,0.12)', border: 'rgba(255,207,92,0.3)', icon: '▲' },
+    };
+    var ac = actionColors[entry.action] || { color: '#7f9bb0', bg: 'rgba(127,155,176,0.1)', border: 'rgba(127,155,176,0.25)', icon: '○' };
+    var actionLabel = entry.action.replace(/_/g, ' ').toUpperCase();
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:flex-start;gap:14px;padding:12px 18px;' + (idx < state.modLog.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.04);' : '') + 'transition:background 0.15s;';
+    row.onmouseenter = function () { row.style.background = 'rgba(0,212,255,0.04)'; };
+    row.onmouseleave = function () { row.style.background = 'transparent'; };
+
+    // Icon
+    var iconBox = document.createElement('div');
+    iconBox.style.cssText = 'width:32px;height:32px;flex:none;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:' + ac.color + ';background:' + ac.bg + ';border:1px solid ' + ac.border + ';';
+    iconBox.textContent = ac.icon;
+    row.appendChild(iconBox);
+
+    // Content
+    var content = document.createElement('div');
+    content.style.cssText = 'flex:1;min-width:0;';
+
+    var actionEl = document.createElement('div');
+    actionEl.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1.5px;color:' + ac.color + ';margin-bottom:3px;';
+    actionEl.textContent = actionLabel;
+    content.appendChild(actionEl);
+
+    var detailEl = document.createElement('div');
+    detailEl.style.cssText = 'font-size:13px;color:#c7d6e2;line-height:1.4;';
+
+    // Build detail text with moderator and target
+    var detailText = '';
+    if (entry.moderator) {
+      detailText += entry.moderator;
+    }
+    detailText += ' → ';
+    detailText += entry.target || '—';
+    detailEl.textContent = detailText;
+    content.appendChild(detailEl);
+
+    if (entry.details) {
+      var notesEl = document.createElement('div');
+      notesEl.style.cssText = 'font-size:12px;color:#54697b;margin-top:2px;';
+      notesEl.textContent = entry.details;
+      content.appendChild(notesEl);
+    }
+
+    row.appendChild(content);
+
+    // Timestamp
+    var timeEl = document.createElement('div');
+    timeEl.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#4f6478;white-space:nowrap;flex:none;margin-top:2px;';
+    timeEl.textContent = timeAgo(entry.created_at);
+    row.appendChild(timeEl);
+
+    timeline.appendChild(row);
+  });
+
+  container.appendChild(timeline);
+
+  // Pagination
+  renderPagination(container, state.modLogPage, state.modLogTotal, function (p) { fetchModLog(p); });
+}
+
+// ── Shared components ────────────────────────────────────
+function renderPanelLoader(container, text) {
+  var loader = document.createElement('div');
+  loader.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 18px;gap:14px;';
+  loader.innerHTML =
+    '<div style="width:22px;height:22px;border:2px solid rgba(0,212,255,0.2);border-top-color:#00d4ff;border-radius:50%;animation:ad-spin 0.6s linear infinite;"></div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#4f6478;letter-spacing:0.5px;">' + esc(text) + '</div>';
+  container.appendChild(loader);
+}
+
+function renderPagination(container, currentPage, totalItems, onPageChange) {
+  var totalPages = Math.max(1, Math.ceil(totalItems / 15));
+  if (totalPages <= 1) return;
+
+  var pager = document.createElement('div');
+  pager.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:6px;margin-top:14px;flex-wrap:wrap;';
+
+  // Prev button
+  if (currentPage > 1) {
+    var prevBtn = document.createElement('button');
+    prevBtn.style.cssText = 'padding:6px 12px;border-radius:7px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#9fc6dc;font-family:\'JetBrains Mono\',monospace;font-size:11px;cursor:pointer;';
+    prevBtn.textContent = '‹ PREV';
+    prevBtn.onclick = function () { onPageChange(currentPage - 1); };
+    pager.appendChild(prevBtn);
+  }
+
+  // Page numbers
+  var start = Math.max(1, currentPage - 2);
+  var end = Math.min(totalPages, start + 4);
+  if (end - start < 4) start = Math.max(1, end - 4);
+
+  for (var i = start; i <= end; i++) {
+    var pageBtn = document.createElement('button');
+    var isActive = i === currentPage;
+    pageBtn.style.cssText = 'min-width:32px;height:32px;padding:0 6px;display:flex;align-items:center;justify-content:center;border-radius:7px;font-family:\'JetBrains Mono\',monospace;font-size:12px;cursor:pointer;color:' + (isActive ? '#03121a' : '#7f9bb0') + ';background:' + (isActive ? '#00d4ff' : 'transparent') + ';border:1px solid ' + (isActive ? 'transparent' : 'rgba(0,212,255,0.2)') + ';';
+    pageBtn.textContent = '' + i;
+    pageBtn.onclick = (function (p) { return function () { onPageChange(p); }; })(i);
+    pager.appendChild(pageBtn);
+  }
+
+  // Next button
+  if (currentPage < totalPages) {
+    var nextBtn = document.createElement('button');
+    nextBtn.style.cssText = 'padding:6px 12px;border-radius:7px;border:1px solid rgba(0,212,255,0.2);background:rgba(0,212,255,0.06);color:#9fc6dc;font-family:\'JetBrains Mono\',monospace;font-size:11px;cursor:pointer;';
+    nextBtn.textContent = 'NEXT ›';
+    nextBtn.onclick = function () { onPageChange(currentPage + 1); };
+    pager.appendChild(nextBtn);
+  }
+
+  container.appendChild(pager);
+}
+
+// ── Init ──────────────────────────────────────────────────
+function init() {
+  checkAuth();
+  // Fetch admin data only after auth confirmed
+  // The render function will trigger the initial fetch via switchTab
+}
+
+// Set up a MutationObserver to detect when the tabContent is rendered and fill it
+// Actually, we'll rely on switchTab being called after auth
+// Override setState to attach after admin state is set
+var origSetState = setState;
+setState = function (update) {
+  origSetState(update);
+  // Auto-fetch admin data when admin auth is confirmed
+  if (update.admin === true && state.stats === null) {
+    fetchStats();
+    fetchReports(1);
+  }
+};
+
+init();
+</script>
+</body>
+</html>

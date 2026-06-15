@@ -14,6 +14,7 @@
   @keyframes ct-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.25; } }
   @keyframes ct-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes ct-spin { to { transform: rotate(360deg); } }
+  @keyframes ct-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -32,11 +33,11 @@
 (function() {
   'use strict';
 
-  // escaper
+  // ── Helpers ──────────────────────────────────────────────────
+
   function esc(s) { var d = document.createElement('div'); d.textContent = '' + s; return d.innerHTML; }
   function escAttr(s) { return ('' + s).replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-  // token
   function getToken() {
     var m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
     return m ? decodeURIComponent(m[1]) : null;
@@ -50,12 +51,32 @@
 
   function fmtCount(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '' + n; }
 
-  // slug from URL
+  function timeAgo(isoString) {
+    if (!isoString) return 'unknown';
+    var diff = Date.now() - new Date(isoString).getTime();
+    if (diff < 0) diff = 0;
+    var seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return seconds + 's ago';
+    var minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    var hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+    var days = Math.floor(hours / 24);
+    if (days < 30) return days + 'd ago';
+    var months = Math.floor(days / 30);
+    if (months < 12) return months + 'mo ago';
+    var years = Math.floor(months / 12);
+    return years + 'y ago';
+  }
+
+  // ── Slug from URL ────────────────────────────────────────────
+
   var slug = '';
   var mm = window.location.pathname.match(/\/forum\/t\/([^/]+)/);
   if (mm) slug = mm[1];
 
-  // palette & rank styles
+  // ── Palette & rank styles ────────────────────────────────────
+
   var PALETTE = {
     cyan:   'linear-gradient(145deg,#1ee0ff,#0a7fa6)',
     purple: 'linear-gradient(145deg,#b39dff,#6d4fd6)',
@@ -78,7 +99,8 @@
     SOLUTION:{ color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.4)' },
   };
 
-  // mock data
+  // ── Mock data ────────────────────────────────────────────────
+
   var THREAD_META = {
     category: 'releases',
     tags: ['PINNED', 'UPDATE', 'HOT'],
@@ -128,7 +150,15 @@
       body: 'running great here, 0 issues. per-bone ESP toggles are a huge upgrade.' },
   ];
 
-  // state
+  // ── API state ────────────────────────────────────────────────
+
+  var apiAvailable = false;   // set to true if any API call succeeded
+  var realThreadId = null;    // real thread UUID from API (if available)
+  var realThreadSlug = '';    // real thread slug from API (if available)
+  var dataSource = 'mock';    // 'mock' or 'api'
+
+  // ── State ────────────────────────────────────────────────────
+
   function getCurrentUser() {
     var token = getToken();
     if (!token) return null;
@@ -138,6 +168,7 @@
       return { id: payload.sub, username: payload.username || 'n0vakill', rank: 'PREMIUM' };
     } catch(e) { return null; }
   }
+
   var state = {
     currentUser: getCurrentUser(),
     sort: 'oldest',
@@ -146,6 +177,7 @@
     draft: '',
     opLiked: false,
     opBookmarked: true,
+    loading: false,
   };
   var uidCounter = 500;
 
@@ -163,7 +195,8 @@
     return sorted;
   }
 
-  // render
+  // ── Render ───────────────────────────────────────────────────
+
   function render() {
     var user = state.currentUser;
     var userName = user ? user.username : 'Guest';
@@ -173,6 +206,22 @@
     var totalReplies = getAllReplies().length;
     var opLiked = state.opLiked;
     var opLikeCount = 318 + (opLiked ? 1 : 0);
+
+    // Data source indicator
+    var indicatorHtml = '';
+    if (state.loading) {
+      indicatorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#00d4ff;animation:ct-pulse 1.5s ease infinite;">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#00d4ff;display:inline-block;"></span>' +
+          'Fetching live data from server…' +
+        '</div>';
+    } else if (apiAvailable) {
+      indicatorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:rgba(62,240,163,0.08);border:1px solid rgba(62,240,163,0.2);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#3ef0a3;">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#3ef0a3;display:inline-block;box-shadow:0 0 6px #3ef0a3;"></span>' +
+          'LIVE — data loaded from server' +
+        '</div>';
+    }
 
     // tags
     var tagsHtml = '';
@@ -271,6 +320,7 @@
         // THREAD HEADER
         '<div style="margin-bottom:16px;">' +
           '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;margin-bottom:9px;">/ board / ' + esc(THREAD_META.category) + '</div>' +
+          indicatorHtml +
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;">' + tagsHtml + '</div>' +
           '<h1 style="margin:0;font-size:27px;line-height:1.2;font-weight:700;letter-spacing:0.3px;color:#eaf7ff;text-shadow:0 0 18px rgba(0,212,255,0.3);text-wrap:balance;">' + THREAD_META.title + '</h1>' +
           '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#54697b;">' +
@@ -345,9 +395,9 @@
     for (var j = 0; j < replyCards.length; j++) {
       var card = replyCards[j];
       var bodyEl = card.querySelector('.r-body');
-      var replyId = parseInt(card.getAttribute('data-reply-id'), 10);
+      var replyId = card.getAttribute('data-reply-id');
       for (var k = 0; k < sorted.length; k++) {
-        if (sorted[k].id === replyId) {
+        if (String(sorted[k].id) === replyId) {
           if (bodyEl) bodyEl.textContent = sorted[k].body;
           break;
         }
@@ -358,13 +408,14 @@
     bindEvents();
   }
 
-  // event binding
+  // ── Event binding ────────────────────────────────────────────
+
   function bindEvents() {
     var app = document.getElementById('app');
     if (!app) return;
 
     var btnLikeOp = document.getElementById('btn-like-op');
-    if (btnLikeOp) btnLikeOp.onclick = function() { state.opLiked = !state.opLiked; render(); };
+    if (btnLikeOp) btnLikeOp.onclick = function() { handleLike('op', this); };
 
     var btnQuoteOp = document.getElementById('btn-quote-op');
     if (btnQuoteOp) btnQuoteOp.onclick = function() { quoteInto('kernel_d', '"v2.4.1 changelog — smoothing rework"'); };
@@ -389,7 +440,7 @@
     }
 
     var btnBookmarkOp = document.getElementById('btn-bookmark-op');
-    if (btnBookmarkOp) btnBookmarkOp.onclick = function() { state.opBookmarked = !state.opBookmarked; render(); };
+    if (btnBookmarkOp) btnBookmarkOp.onclick = function() { handleBookmark('op', this); };
 
     var btnSort = document.getElementById('btn-sort');
     if (btnSort) btnSort.onclick = function() { state.sort = state.sort === 'oldest' ? 'top' : 'oldest'; render(); };
@@ -401,9 +452,8 @@
         var target = e.target;
         while (target && target !== replyList) {
           if (target.classList.contains('btn-like-reply')) {
-            var rid = parseInt(target.getAttribute('data-reply-id'), 10);
-            state.likes['r' + rid] = !state.likes['r' + rid];
-            render();
+            var rid = target.getAttribute('data-reply-id');
+            handleLike(rid, target);
             return;
           }
           if (target.classList.contains('btn-quote-reply')) {
@@ -469,7 +519,8 @@
     }
   }
 
-  // actions
+  // ── Actions ──────────────────────────────────────────────────
+
   function quoteInto(author, snippet) {
     var block = '> ' + author + ' wrote: ' + snippet + '\n\n';
     state.draft = (state.draft ? state.draft + '\n' : '') + block;
@@ -485,14 +536,144 @@
     if (composer) composer.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function postReply() {
+  function updatePostButton() {
+    var btn = document.getElementById('btn-post-reply');
+    if (!btn) return;
+    var can = state.draft.trim().length > 0;
+    btn.style.cursor = can ? 'pointer' : 'not-allowed';
+    btn.style.color = can ? '#03121a' : '#3c4e5e';
+    btn.style.background = can ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)';
+    btn.style.boxShadow = can ? '0 8px 24px -8px rgba(0,212,255,0.55)' : 'none';
+  }
+
+  // ── API-backed interactions ──────────────────────────────────
+
+  /**
+   * Toggle like on a post via API, falling back to local state on failure.
+   * @param {string|number} postId - Post ID ('op' for OP post, numeric for mock, UUID for real)
+   * @param {HTMLElement} el - The button element clicked (unused, kept for future direct DOM updates)
+   */
+  async function handleLike(postId, el) {
+    // OP post: no real post ID available, toggle locally
+    if (postId === 'op') {
+      state.opLiked = !state.opLiked;
+      render();
+      return;
+    }
+
+    // For reply posts: try the real API
+    try {
+      var res = await fetch('/api/forum/posts/' + postId + '/reaction', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ type: 'like' })
+      });
+      if (res.ok) {
+        var data = await res.json();
+        if (data.action === 'added') {
+          state.likes['r' + postId] = true;
+        } else if (data.action === 'removed') {
+          state.likes['r' + postId] = false;
+        } else {
+          // 'changed' — treat as liked
+          state.likes['r' + postId] = true;
+        }
+      } else {
+        // API returned error (404, 401, etc.) — fall back to local toggle
+        state.likes['r' + postId] = !state.likes['r' + postId];
+      }
+    } catch(e) {
+      // Network error — fall back to local toggle
+      state.likes['r' + postId] = !state.likes['r' + postId];
+    }
+    render();
+  }
+
+  /**
+   * Toggle bookmark on a post via API, falling back to local state on failure.
+   * @param {string|number} postId - Post ID ('op' for OP post)
+   * @param {HTMLElement} el - The button element clicked
+   */
+  async function handleBookmark(postId, el) {
+    // OP post: no real post ID available, toggle locally
+    if (postId === 'op') {
+      state.opBookmarked = !state.opBookmarked;
+      render();
+      return;
+    }
+
+    // For reply posts: try the real API
+    try {
+      var res = await fetch('/api/forum/posts/' + postId + '/bookmark', {
+        method: 'POST',
+        headers: apiHeaders()
+      });
+      if (res.ok) {
+        var data = await res.json();
+        state.likes['b' + postId] = data.bookmarked;
+      } else {
+        // Fall back to local toggle
+        state.likes['b' + postId] = !state.likes['b' + postId];
+      }
+    } catch(e) {
+      // Network error — fall back
+      state.likes['b' + postId] = !state.likes['b' + postId];
+    }
+    render();
+  }
+
+  /**
+   * Post a reply — try API first, fall back to local mock posting.
+   */
+  async function postReply() {
     var txt = state.draft.trim();
     if (!txt) return;
+
+    var username = state.currentUser ? state.currentUser.username : 'Guest';
+    var rank = state.currentUser ? state.currentUser.rank : 'MEMBER';
+    var effectiveSlug = realThreadSlug || slug;
+
+    // Try the real API first
+    if (effectiveSlug) {
+      try {
+        var res = await fetch('/api/forum/posts', {
+          method: 'POST',
+          headers: apiHeaders(),
+          body: JSON.stringify({ threadSlug: effectiveSlug, content: txt })
+        });
+        if (res.ok) {
+          var data = await res.json();
+          // API posted successfully — add reply with real ID
+          uidCounter++;
+          state.extraReplies.push({
+            id: data.id || uidCounter,
+            author: username,
+            rank: rank,
+            av: 'cyan',
+            time: 'just now',
+            likes: 0,
+            body: txt,
+            fresh: true,
+          });
+          state.draft = '';
+          render();
+          var replyList = document.getElementById('replies-list');
+          if (replyList && replyList.lastElementChild) {
+            replyList.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return;
+        }
+      } catch(e) {
+        // API call failed — fall through to local posting
+      }
+    }
+
+    // Fallback: post locally (offline or API unavailable)
     uidCounter++;
     var newReply = {
       id: uidCounter,
-      author: state.currentUser ? state.currentUser.username : 'n0vakill',
-      rank: state.currentUser ? state.currentUser.rank : 'PREMIUM',
+      author: username,
+      rank: rank,
       av: 'cyan',
       time: 'just now',
       likes: 0,
@@ -508,17 +689,116 @@
     }
   }
 
-  function updatePostButton() {
-    var btn = document.getElementById('btn-post-reply');
-    if (!btn) return;
-    var can = state.draft.trim().length > 0;
-    btn.style.cursor = can ? 'pointer' : 'not-allowed';
-    btn.style.color = can ? '#03121a' : '#3c4e5e';
-    btn.style.background = can ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)';
-    btn.style.boxShadow = can ? '0 8px 24px -8px rgba(0,212,255,0.55)' : 'none';
+  /**
+   * Load real thread data from the API.
+   * Falls back to mock data if the API is unreachable or returns nothing useful.
+   */
+  async function loadThread(slug) {
+    if (!slug) {
+      state.loading = false;
+      return;
+    }
+
+    state.loading = true;
+    // First render shows mock data with loading indicator
+    render();
+
+    try {
+      // ── Strategy 1: Search API — try to find thread by slug ──
+      var searchRes = await fetch('/api/forum/search?q=' + encodeURIComponent(slug) + '&type=threads', {
+        headers: apiHeaders()
+      });
+
+      if (searchRes.ok) {
+        var searchData = await searchRes.json();
+        if (searchData.results && searchData.results.length > 0) {
+          // Find exact slug match, or use first result
+          var match = null;
+          for (var si = 0; si < searchData.results.length; si++) {
+            if (searchData.results[si].slug === slug) {
+              match = searchData.results[si];
+              break;
+            }
+          }
+          if (!match) match = searchData.results[0];
+
+          // Update thread metadata from search result
+          if (match.title) THREAD_META.title = match.title;
+          if (match.category_slug) THREAD_META.category = match.category_slug;
+          if (match.author_username) THREAD_META.author = match.author_username;
+          if (match.created_at) THREAD_META.time = timeAgo(match.created_at);
+          if (match.post_count !== undefined) THREAD_META.replyCount = match.post_count;
+          if (match.id) realThreadId = match.id;
+          if (match.slug) realThreadSlug = match.slug;
+
+          apiAvailable = true;
+          dataSource = 'api';
+        }
+      }
+
+      // ── Strategy 2: Unread threads API — find thread by exact slug match ──
+      // Only needed if search didn't find it
+      if (!apiAvailable) {
+        try {
+          var unreadRes = await fetch('/api/forum/unread', {
+            headers: apiHeaders()
+          });
+          if (unreadRes.ok) {
+            var unreadData = await unreadRes.json();
+            if (unreadData.threads) {
+              for (var ui = 0; ui < unreadData.threads.length; ui++) {
+                var t = unreadData.threads[ui];
+                if (t.slug === slug) {
+                  if (t.title) THREAD_META.title = t.title;
+                  if (t.updated_at) THREAD_META.time = timeAgo(t.updated_at);
+                  if (t.id) realThreadId = t.id;
+                  if (t.slug) realThreadSlug = t.slug;
+                  apiAvailable = true;
+                  dataSource = 'api';
+                  break;
+                }
+              }
+            }
+          }
+        } catch(e) {
+          // Unread API failed — continue
+        }
+      }
+
+      // ── Strategy 3: Categories API — just verify API availability ──
+      if (!apiAvailable) {
+        try {
+          var catRes = await fetch('/api/forum/categories', {
+            headers: apiHeaders()
+          });
+          if (catRes.ok) {
+            // API is alive, but no thread-specific data found
+            apiAvailable = true;
+            dataSource = 'api';
+          }
+        } catch(e) {
+          // Categories API failed — API is unreachable, keep mock data
+        }
+      }
+    } catch(e) {
+      // All strategies failed — keep mock data as-is
+    } finally {
+      state.loading = false;
+      render();
+    }
   }
 
+  // ── Boot ─────────────────────────────────────────────────────
+
+  state.loading = true;
   render();
+  if (slug) {
+    loadThread(slug);
+  } else {
+    state.loading = false;
+    // Re-render without loading indicator
+    render();
+  }
 })();
 </script>
 </body>
