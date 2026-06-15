@@ -65,6 +65,19 @@ app.get("/admin", (_req, res) => {
   res.sendFile(path.join(publicDir, "admin.html"));
 });
 
+// Notifications page
+app.get("/notifications", (_req, res) => {
+  res.sendFile(path.join(publicDir, "notifications.html"));
+});
+
+// Conversations pages
+app.get("/conversations", (_req, res) => {
+  res.sendFile(path.join(publicDir, "conversations.html"));
+});
+app.get("/conversations/:id", (_req, res) => {
+  res.sendFile(path.join(publicDir, "conversation.html"));
+});
+
 // 404 handler — skip for paths that might be static files
 app.use((req, res) => {
   // Don't 404 for root — index.html is served by express.static

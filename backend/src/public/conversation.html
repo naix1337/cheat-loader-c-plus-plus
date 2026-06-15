@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversation — insolution.cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; font-family: 'Space Grotesk', system-ui, sans-serif; color: #c7d6e2; min-height: 100vh; }
+  @keyframes ct-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes ct-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.25; } }
+  @keyframes ct-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes ct-spin { to { transform: rotate(360deg); } }
+  @keyframes ct-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  a { color: inherit; text-decoration: none; }
+  input, textarea, button, select { font-family: inherit; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; border-radius: 10px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+    color: #03121a; background: linear-gradient(180deg,#1ee0ff,#00a6cf);
+    box-shadow: 0 8px 24px -8px rgba(0,212,255,0.55); cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 28px -6px rgba(0,212,255,0.7); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 9px; border: 1px solid rgba(0,212,255,0.18);
+    font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600;
+    color: #9fc6dc; background: rgba(2,6,10,0.5); cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-secondary:hover { border-color: rgba(0,212,255,0.45); color: #cdeefb; }
+  .btn-danger {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 9px; border: 1px solid rgba(255,107,107,0.3);
+    font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600;
+    color: #ff8b8b; background: rgba(255,107,107,0.08); cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-danger:hover { border-color: rgba(255,107,107,0.6); background: rgba(255,107,107,0.15); }
+  .form-input {
+    width: 100%; padding: 10px 14px; border-radius: 9px;
+    background: rgba(2,6,10,0.6); border: 1px solid rgba(0,212,255,0.18);
+    outline: none; color: #d6e6f2; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: #00d4ff; }
+  .form-input::placeholder { color: #3c4e5e; }
+  @media (max-width: 640px) {
+    .page-wrap { padding: 14px 12px 40px !important; }
+    .msg-card { flex-direction: column; }
+    .msg-avatar { width: 32px !important; height: 32px !important; font-size: 13px !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;gap:12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#4f6478;">
+    <span style="width:16px;height:16px;border:2px solid rgba(0,212,255,0.2);border-top-color:#00d4ff;border-radius:50%;display:inline-block;animation:ct-spin 0.6s linear infinite;"></span>
+    LOADING CONVERSATION…
+  </div>
+</div>
+<script>
+(function() {
+  'use strict';
+
+  // ── Helpers ──────────────────────────────────────────────────
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = '' + s; return d.innerHTML; }
+  function escAttr(s) { return ('' + s).replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function getToken() {
+    var m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function apiHeaders() {
+    var h = { 'Content-Type': 'application/json' };
+    var t = getToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+
+  function fmtCount(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '' + n; }
+
+  function timeAgo(isoString) {
+    if (!isoString) return 'unknown';
+    var diff = Date.now() - new Date(isoString).getTime();
+    if (diff < 0) diff = 0;
+    var seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return seconds + 's ago';
+    var minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    var hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+    var days = Math.floor(hours / 24);
+    if (days < 30) return days + 'd ago';
+    var months = Math.floor(days / 30);
+    if (months < 12) return months + 'mo ago';
+    var years = Math.floor(months / 12);
+    return years + 'y ago';
+  }
+
+  function fmtTimestamp(isoString) {
+    if (!isoString) return '';
+    var d = new Date(isoString);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function getCurrentUser() {
+    var token = getToken();
+    if (!token) return null;
+    try {
+      var parts = token.split('.');
+      var payload = JSON.parse(atob(parts[1]));
+      return { id: payload.sub, username: payload.username || 'user', rank: payload.rank || 'MEMBER' };
+    } catch(e) { return null; }
+  }
+
+  // ── ID from URL ──────────────────────────────────────────────
+
+  var conversationId = '';
+  var mm = window.location.pathname.match(/\/conversations\/([^/]+)/);
+  if (mm) conversationId = mm[1];
+
+  // ── Palette ──────────────────────────────────────────────────
+
+  var AVATAR_PALETTES = [
+    'linear-gradient(145deg,#1ee0ff,#0a7fa6)',
+    'linear-gradient(145deg,#b39dff,#6d4fd6)',
+    'linear-gradient(145deg,#3ef0a3,#1f9e72)',
+    'linear-gradient(145deg,#ffcf5c,#d49a17)',
+    'linear-gradient(145deg,#ff8b8b,#c74f4f)',
+    'linear-gradient(145deg,#7fd0ff,#3a86c7)',
+    'linear-gradient(145deg,#ff9ae6,#c456a8)',
+    'linear-gradient(145deg,#a8e6cf,#3d8a6a)',
+  ];
+
+  function getPalette(index) { return AVATAR_PALETTES[index % AVATAR_PALETTES.length]; }
+
+  // ── Mock data ────────────────────────────────────────────────
+
+  var MOCK_META = {
+    id: conversationId || 'mock-conv-1',
+    title: 'License key activation issue',
+    author_id: 'u2',
+    author_username: 'mara.exe',
+    open_invite: false,
+    recipient_count: 3,
+    message_count: 12,
+    participants: [
+      { id: 'u1', username: 'n0vakill' },
+      { id: 'u2', username: 'mara.exe' },
+      { id: 'u3', username: 'syn' },
+    ],
+  };
+
+  var MOCK_MESSAGES = [
+    {
+      id: 'm1', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u2', author_username: 'mara.exe',
+      content: 'Hey, I just purchased a license key but it says "invalid key" when I try to activate it. I double-checked and I\'m typing it correctly.',
+      created_at: new Date(Date.now() - 86400000 * 3).toISOString()
+    },
+    {
+      id: 'm2', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u1', author_username: 'n0vakill',
+      content: 'Hi mara, sorry about that. Can you send me the order number so I can look it up? Also, make sure you\'re copying the key from your account page, not the email — sometimes the email truncates the last character.',
+      created_at: new Date(Date.now() - 86400000 * 3 + 3600000).toISOString()
+    },
+    {
+      id: 'm3', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u2', author_username: 'mara.exe',
+      content: 'Order number is INV-2024-00421. I tried from the account page too, same result. Could it be a region lock? I\'m in Europe.',
+      created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+      id: 'm4', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u1', author_username: 'n0vakill',
+      content: 'No region lock on standard licenses. Let me check the key status on my end. One moment.',
+      created_at: new Date(Date.now() - 86400000 * 2 + 1800000).toISOString()
+    },
+    {
+      id: 'm5', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u1', author_username: 'n0vakill',
+      content: 'Found the issue — the key was generated with a typo in the prefix. I\'ve fixed it and regenerated it. You should see the new key under your account > licenses now. Try that one.',
+      created_at: new Date(Date.now() - 86400000 * 2 + 3600000).toISOString()
+    },
+    {
+      id: 'm6', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u2', author_username: 'mara.exe',
+      content: 'That worked! Thanks for the quick fix. Appreciate it.',
+      created_at: new Date(Date.now() - 86400000 * 2 + 7200000).toISOString()
+    },
+    {
+      id: 'm7', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u1', author_username: 'n0vakill',
+      content: 'No problem! Let me know if you have any other issues. I\'ll close this ticket but feel free to reopen if needed.',
+      created_at: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      id: 'm8', conversation_id: conversationId || 'mock-conv-1',
+      author_id: 'u2', author_username: 'mara.exe',
+      content: 'Actually, one more thing — I tried reinstalling but it still says invalid key. Can you check on your end?',
+      created_at: new Date(Date.now() - 2 * 3600000).toISOString()
+    },
+  ];
+
+  var MOCK_MESSAGES_TOTAL = 8;
+  var MOCK_MESSAGES_TOTAL_PAGES = 1;
+
+  // ── State ────────────────────────────────────────────────────
+
+  var state = {
+    currentUser: getCurrentUser(),
+    meta: null,
+    messages: [],
+    total: 0,
+    page: 1,
+    totalPages: 0,
+    loading: true,
+    apiAvailable: false,
+    replying: false,
+    replyDraft: '',
+    showAddParticipant: false,
+    addRecipientsInput: '',
+    submittingReply: false,
+    submittingLeave: false,
+    submittingAdd: false,
+    error: null,
+    successMsg: null,
+  };
+
+  // ── API ──────────────────────────────────────────────────────
+
+  async function fetchConversation() {
+    state.loading = true;
+    state.error = null;
+    render();
+
+    // Try to find metadata from the conversations list, and fetch messages
+    var metaFound = false;
+
+    // Strategy 1: Look up this conversation from the list API
+    try {
+      var listRes = await fetch('/api/conversations?page=1&limit=100', { headers: apiHeaders() });
+      if (listRes.ok) {
+        var listData = await listRes.json();
+        var convs = listData.conversations || [];
+        for (var i = 0; i < convs.length; i++) {
+          if (convs[i].id === conversationId) {
+            state.meta = convs[i];
+            // Add participants list from list data (not provided directly, so we infer from author_username)
+            state.meta.participants = [
+              { id: convs[i].author_id, username: convs[i].author_username }
+            ];
+            metaFound = true;
+            state.apiAvailable = true;
+            break;
+          }
+        }
+      }
+    } catch(e) {
+      // continue to fallback
+    }
+
+    // Strategy 2: Fetch messages directly
+    try {
+      var msgRes = await fetch('/api/conversations/' + encodeURIComponent(conversationId) + '?page=1', { headers: apiHeaders() });
+      if (msgRes.ok) {
+        var msgData = await msgRes.json();
+        state.messages = msgData.messages || [];
+        state.total = msgData.total || 0;
+        state.page = msgData.page || 1;
+        state.totalPages = msgData.totalPages || 0;
+        state.apiAvailable = true;
+
+        // Extract unique participants from messages
+        if (!metaFound) {
+          var seen = {};
+          var participants = [];
+          for (var mi = 0; mi < state.messages.length; mi++) {
+            var msg = state.messages[mi];
+            if (!seen[msg.author_id]) {
+              seen[msg.author_id] = true;
+              participants.push({ id: msg.author_id, username: msg.author_username });
+            }
+          }
+          state.meta = {
+            id: conversationId,
+            title: 'Conversation',
+            open_invite: false,
+            recipient_count: participants.length,
+            message_count: state.total,
+            participants: participants,
+            author_id: participants.length > 0 ? participants[0].id : '',
+            author_username: participants.length > 0 ? participants[0].username : '',
+          };
+          metaFound = true;
+        }
+      } else {
+        // API returned error — use mock if we don't have metadata
+        if (!metaFound) {
+          throw new Error('API returned ' + msgRes.status);
+        }
+      }
+    } catch(e) {
+      if (!metaFound) {
+        throw e; // fall through to mock
+      }
+    }
+
+    // If we got here and have real data, render
+    if (metaFound && state.messages.length > 0) {
+      state.loading = false;
+      render();
+      scrollToBottom();
+      return;
+    }
+
+    // Fallback: use mock data
+    state.meta = JSON.parse(JSON.stringify(MOCK_META));
+    state.messages = JSON.parse(JSON.stringify(MOCK_MESSAGES));
+    state.total = MOCK_MESSAGES_TOTAL;
+    state.page = 1;
+    state.totalPages = MOCK_MESSAGES_TOTAL_PAGES;
+    state.apiAvailable = false;
+    state.loading = false;
+    render();
+    scrollToBottom();
+  }
+
+  function scrollToBottom() {
+    setTimeout(function() {
+      var msgList = document.getElementById('msg-list');
+      if (msgList) msgList.scrollTop = msgList.scrollHeight;
+    }, 50);
+  }
+
+  async function sendReply(content) {
+    state.submittingReply = true;
+    state.error = null;
+    render();
+
+    try {
+      var res = await fetch('/api/conversations/' + encodeURIComponent(conversationId) + '/reply', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ content: content })
+      });
+      if (!res.ok) throw new Error('API returned ' + res.status);
+      var data = await res.json();
+      // Add the new message to the list
+      if (data.message) {
+        state.messages.push(data.message);
+        state.total++;
+      }
+      state.submittingReply = false;
+      state.replyDraft = '';
+      render();
+      scrollToBottom();
+    } catch(e) {
+      console.warn('API reply failed, posting locally:', e.message);
+      // Local fallback
+      var user = state.currentUser;
+      var localMsg = {
+        id: 'local-reply-' + Date.now(),
+        conversation_id: conversationId,
+        author_id: user ? user.id : 'u1',
+        author_username: user ? user.username : 'user',
+        content: content,
+        created_at: new Date().toISOString()
+      };
+      state.messages.push(localMsg);
+      state.total++;
+      state.submittingReply = false;
+      state.replyDraft = '';
+      render();
+      scrollToBottom();
+    }
+  }
+
+  async function leaveConversation() {
+    if (!confirm('Are you sure you want to leave this conversation?')) return;
+    state.submittingLeave = true;
+    state.error = null;
+    render();
+
+    try {
+      var res = await fetch('/api/conversations/' + encodeURIComponent(conversationId) + '/leave', {
+        method: 'POST',
+        headers: apiHeaders()
+      });
+      if (!res.ok) throw new Error('API returned ' + res.status);
+      // Redirect to conversations list
+      window.location.href = '/conversations';
+    } catch(e) {
+      console.warn('API leave failed, redirecting anyway:', e.message);
+      window.location.href = '/conversations';
+    }
+  }
+
+  async function addParticipants(recipients) {
+    state.submittingAdd = true;
+    state.error = null;
+    render();
+
+    try {
+      var res = await fetch('/api/conversations/' + encodeURIComponent(conversationId) + '/add', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ recipients: recipients })
+      });
+      if (!res.ok) {
+        var errData = null;
+        try { errData = await res.json(); } catch(e) {}
+        throw new Error(errData && errData.error ? errData.error : 'API returned ' + res.status);
+      }
+      state.successMsg = 'Participants added successfully.';
+      state.submittingAdd = false;
+      state.showAddParticipant = false;
+      state.addRecipientsInput = '';
+      render();
+    } catch(e) {
+      state.error = 'Failed to add participants: ' + e.message;
+      state.submittingAdd = false;
+      render();
+    }
+  }
+
+  // ── Render ──────────────────────────────────────────────────
+
+  function render() {
+    var app = document.getElementById('app');
+    var user = state.currentUser;
+    var meta = state.meta;
+    var msgs = state.messages;
+
+    if (!meta) {
+      // Still loading or no data
+      return;
+    }
+
+    var userName = user ? user.username : 'Guest';
+    var userInitial = userName[0].toUpperCase();
+
+    // Indicator
+    var indicatorHtml = '';
+    if (state.loading) {
+      indicatorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#00d4ff;animation:ct-pulse 1.5s ease infinite;">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#00d4ff;display:inline-block;"></span>' +
+          'Fetching messages…' +
+        '</div>';
+    } else if (state.apiAvailable) {
+      indicatorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:rgba(62,240,163,0.08);border:1px solid rgba(62,240,163,0.2);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#3ef0a3;">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#3ef0a3;display:inline-block;box-shadow:0 0 6px #3ef0a3;"></span>' +
+          'LIVE — data loaded from server' +
+        '</div>';
+    }
+
+    // Error banner
+    var errorHtml = '';
+    if (state.error) {
+      errorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#ff8b8b;">' +
+          '<span style="font-size:14px;">!</span>' + esc(state.error) +
+        '</div>';
+    }
+
+    // Success banner
+    var successHtml = '';
+    if (state.successMsg) {
+      successHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(62,240,163,0.1);border:1px solid rgba(62,240,163,0.3);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#3ef0a3;">' +
+          '<span style="font-size:14px;">&#x2713;</span>' + esc(state.successMsg) +
+        '</div>';
+    }
+
+    // Participants list
+    var participantsList = '';
+    if (meta.participants && meta.participants.length > 0) {
+      var parts = [];
+      for (var pi = 0; pi < meta.participants.length; pi++) {
+        var p = meta.participants[pi];
+        var isYou = user && p.id === user.id;
+        parts.push('<span style="color:#eaf7ff;">' + esc(p.username) + (isYou ? ' <span style="color:#54697b;font-size:10px;">(you)</span>' : '') + '</span>');
+      }
+      participantsList = parts.join('<span style="color:#44586a;font-size:10px;margin:0 2px;">,</span> ');
+    }
+
+    // Messages
+    var messagesHtml = '';
+    for (var i = 0; i < msgs.length; i++) {
+      var m = msgs[i];
+      var isOwn = user && m.author_id === user.id;
+      var pal = getPalette(i);
+      var avatarLetter = m.author_username ? m.author_username[0].toUpperCase() : '?';
+      var ts = fmtTimestamp(m.created_at);
+      var timeago = timeAgo(m.created_at);
+
+      var cardBorderColor = isOwn ? 'rgba(0,212,255,0.25)' : 'rgba(0,212,255,0.12)';
+      var cardBg = isOwn
+        ? 'linear-gradient(180deg,rgba(0,212,255,0.06),rgba(9,12,17,0.7))'
+        : 'linear-gradient(180deg,rgba(16,22,30,0.6),rgba(9,12,17,0.7))';
+
+      messagesHtml +=
+        '<div class="msg-card" style="border-radius:14px;overflow:hidden;background:' + cardBg + ';border:1px solid ' + cardBorderColor + ';box-shadow:0 14px 40px -28px rgba(0,0,0,0.9);margin-bottom:10px;animation:ct-rise 0.25s ease both;animation-delay:' + (i * 0.03) + 's;">' +
+          '<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;">' +
+            // Avatar
+            '<div class="msg-avatar" style="width:38px;height:38px;flex:none;border-radius:10px;background:' + pal + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#03121a;box-shadow:0 0 12px -4px rgba(0,212,255,0.3);">' +
+              esc(avatarLetter) +
+            '</div>' +
+            // Content
+            '<div style="min-width:0;flex:1;">' +
+              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">' +
+                '<span style="font-size:14px;font-weight:700;color:#eaf7ff;">' + esc(m.author_username) + '</span>' +
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#44586a;">' + esc(ts) + '</span>' +
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:#3c4e5e;">(' + esc(timeago) + ')</span>' +
+                (isOwn ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;letter-spacing:1px;color:#00d4ff;padding:1px 6px;border-radius:4px;border:1px solid rgba(0,212,255,0.25);background:rgba(0,212,255,0.08);">YOU</span>' : '') +
+              '</div>' +
+              '<div class="msg-body" style="font-size:14px;line-height:1.66;color:#bccdda;white-space:pre-wrap;"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // Add participant form
+    var addParticipantHtml = '';
+    if (state.showAddParticipant) {
+      addParticipantHtml =
+        '<div style="border-radius:12px;overflow:hidden;background:rgba(18,24,33,0.85);border:1px solid rgba(0,212,255,0.2);margin-bottom:10px;">' +
+          '<div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="font-size:13px;font-weight:600;color:#eaf7ff;">Add Participants</span>' +
+              '<button class="btn-secondary" onclick="window.__toggleAddForm()" style="margin-left:auto;padding:3px 8px;font-size:10px;">CANCEL</button>' +
+            '</div>' +
+            '<input class="form-input" id="add-recipients-input" type="text" placeholder="Comma-separated usernames or IDs" value="' + esc(state.addRecipientsInput) + '">' +
+            '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+              '<button class="btn-primary" id="btn-add-participants" style="padding:8px 16px;font-size:12px;" ' + (state.submittingAdd ? 'disabled' : '') + '>' +
+                (state.submittingAdd ? 'ADDING…' : 'ADD PARTICIPANTS') +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // Reply composer state
+    var canReply = state.replyDraft.trim().length > 0;
+
+    // Build full HTML
+    app.innerHTML =
+      '<div style="position:relative;min-height:100vh;font-family:\'Space Grotesk\',system-ui,sans-serif;background:radial-gradient(130% 80% at 50% -10%,#0d1622 0%,#0a0a0f 46%,#060709 100%);color:#c7d6e2;">' +
+        // CRT overlays
+        '<div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);pointer-events:none;"></div>' +
+        '<div style="position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.18) 3px);background-size:100% 6px;animation:ct-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.5;"></div>' +
+        '<div style="position:fixed;top:-160px;left:50%;width:720px;height:360px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,0.13),transparent 70%);filter:blur(30px);pointer-events:none;"></div>' +
+        '<div class="page-wrap" style="position:relative;z-index:1;max-width:720px;margin:0 auto;padding:20px 22px 64px;display:flex;flex-direction:column;min-height:100vh;">' +
+
+        // TOP BAR
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px;margin-bottom:14px;flex:none;">' +
+          '<a href="/conversations" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:9px 14px;border-radius:10px;background:rgba(16,22,30,0.7);border:1px solid rgba(0,212,255,0.18);color:#9fc6dc;font-size:13px;font-weight:600;" onmouseenter="this.style.borderColor=\'rgba(0,212,255,0.45)\';this.style.color=\'#cdeefb\'" onmouseleave="this.style.borderColor=\'rgba(0,212,255,0.18)\';this.style.color=\'#9fc6dc\'">' +
+            '<span style="color:#00d4ff;font-size:15px;">&#x2039;</span> Conversations' +
+          '</a>' +
+          '<div style="display:flex;align-items:center;gap:9px;margin-left:auto;">' +
+            '<a href="/" style="display:flex;align-items:center;gap:9px;text-decoration:none;">' +
+              '<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:8px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 14px -2px rgba(0,212,255,0.5);">' +
+                '<div style="width:11px;height:11px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 9px #00d4ff;"></div>' +
+              '</div>' +
+              '<div style="font-size:15px;font-weight:700;letter-spacing:2.5px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,0.5);">AETHER</div>' +
+            '</a>' +
+          '</div>' +
+        '</div>' +
+
+        // CONVERSATION HEADER
+        '<div style="flex:none;margin-bottom:12px;">' +
+          '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">' +
+            '<div style="min-width:0;flex:1;">' +
+              '<h1 style="margin:0 0 6px;font-size:22px;font-weight:700;color:#eaf7ff;letter-spacing:0.3px;text-shadow:0 0 18px rgba(0,212,255,0.3);word-wrap:break-word;">' + esc(meta.title) + '</h1>' +
+              '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#54697b;">' +
+                '<span>' + fmtCount(meta.recipient_count) + ' participants</span>' +
+                ' &middot; <span>' + fmtCount(meta.message_count) + ' messages</span>' +
+              '</div>' +
+              '<div style="margin-top:6px;font-size:12px;color:#7f9bb0;display:flex;align-items:center;gap:4px;flex-wrap:wrap;">' +
+                '<span>With:</span> ' + participantsList +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">' +
+              (meta.open_invite
+                ? '<button class="btn-secondary" onclick="window.__toggleAddForm()" style="white-space:nowrap;padding:7px 14px;font-size:11px;">+ ADD PARTICIPANT</button>'
+                : '') +
+              '<button class="btn-danger" onclick="window.__leave()" style="white-space:nowrap;padding:7px 14px;font-size:11px;">LEAVE</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        indicatorHtml +
+        errorHtml +
+        successHtml +
+
+        // MESSAGES LIST (scrollable area)
+        '<div id="msg-list" style="flex:1;overflow-y:auto;margin-bottom:14px;padding-right:4px;">' +
+          (state.loading
+            ? '<div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:60px 0;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#4f6478;"><span style="width:14px;height:14px;border:2px solid rgba(0,212,255,0.2);border-top-color:#00d4ff;border-radius:50%;display:inline-block;animation:ct-spin 0.6s linear infinite;"></span>LOADING MESSAGES…</div>'
+            : (msgs.length === 0
+              ? '<div style="text-align:center;padding:40px 20px;border-radius:14px;background:rgba(16,22,30,0.5);border:1px solid rgba(0,212,255,0.1);"><div style="font-size:36px;margin-bottom:10px;opacity:0.5;">&#x1F4AC;</div><div style="font-size:16px;color:#54697b;">No messages yet. Start the conversation!</div></div>'
+              : '<div style="display:flex;flex-direction:column;">' + messagesHtml + '</div>')
+          ) +
+        '</div>' +
+
+        addParticipantHtml +
+
+        // REPLY COMPOSER (sticky bottom)
+        '<div style="flex:none;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,rgba(18,24,33,0.85),rgba(10,13,18,0.9));border:1px solid rgba(0,212,255,0.28);box-shadow:0 0 44px -16px rgba(0,212,255,0.45);">' +
+          '<div style="padding:12px 16px;">' +
+            '<textarea id="reply-textarea" placeholder="Type your message…" style="width:100%;min-height:56px;max-height:160px;resize:vertical;padding:10px 14px;border-radius:10px;background:rgba(2,6,10,0.6);border:1px solid rgba(0,212,255,0.18);outline:none;color:#d6e6f2;font-family:\'JetBrains Mono\',monospace;font-size:13px;line-height:1.6;">' + esc(state.replyDraft) + '</textarea>' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
+              '<div style="display:flex;gap:6px;">' +
+                '<button class="btn-toolbar" data-tag="@" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">@</button>' +
+                '<button class="btn-toolbar" data-tag="B" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">B</button>' +
+                '<button class="btn-toolbar" data-tag="I" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;font-style:italic;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">I</button>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:8px;margin-left:auto;">' +
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:#3c4e5e;">Ctrl+Enter to send</span>' +
+                '<button id="btn-send-reply" style="display:flex;align-items:center;gap:7px;padding:9px 18px;border-radius:9px;border:none;white-space:nowrap;cursor:' + (canReply && !state.submittingReply ? 'pointer' : 'not-allowed') + ';font-family:\'Space Grotesk\',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;color:' + (canReply && !state.submittingReply ? '#03121a' : '#3c4e5e') + ';background:' + (canReply && !state.submittingReply ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)') + ';box-shadow:' + (canReply && !state.submittingReply ? '0 6px 20px -6px rgba(0,212,255,0.5)' : 'none') + ';">' +
+                  (state.submittingReply ? 'SENDING…' : 'SEND') +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+      '</div>' +
+    '</div>';
+
+    // Set message bodies via textContent (XSS-safe)
+    var msgBodies = app.querySelectorAll('.msg-body');
+    for (var j = 0; j < msgBodies.length && j < msgs.length; j++) {
+      msgBodies[j].textContent = msgs[j].content;
+    }
+
+    bindEvents();
+  }
+
+  // ── Event binding ────────────────────────────────────────────
+
+  function bindEvents() {
+    // Reply textarea
+    var textarea = document.getElementById('reply-textarea');
+    if (textarea) {
+      textarea.oninput = function(e) {
+        state.replyDraft = e.target.value;
+        updateSendButton();
+      };
+      textarea.onkeydown = function(e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          handleSend();
+        }
+      };
+    }
+
+    // Send button
+    var btnSend = document.getElementById('btn-send-reply');
+    if (btnSend) {
+      btnSend.onclick = function() { handleSend(); };
+    }
+
+    // Toolbar buttons
+    var toolbarBtns = document.querySelectorAll('.btn-toolbar');
+    for (var ti = 0; ti < toolbarBtns.length; ti++) {
+      (function(btn) {
+        btn.onclick = function() {
+          var tag = btn.getAttribute('data-tag');
+          var ta = document.getElementById('reply-textarea');
+          if (!ta) return;
+          var start = ta.selectionStart;
+          var end = ta.selectionEnd;
+          var text = ta.value;
+          var before = text.substring(0, start);
+          var selected = text.substring(start, end);
+          var after = text.substring(end);
+          var wrap;
+          switch (tag) {
+            case 'B': wrap = ['**', '**']; break;
+            case 'I': wrap = ['_', '_']; break;
+            case '@': wrap = ['@', ' ']; break;
+            default: wrap = [tag, ''];
+          }
+          var insertion = wrap[0] + (selected || '') + wrap[1];
+          ta.value = before + insertion + after;
+          state.replyDraft = ta.value;
+          ta.focus();
+          var newPos = start + insertion.length;
+          ta.selectionStart = newPos;
+          ta.selectionEnd = newPos;
+          updateSendButton();
+        };
+      })(toolbarBtns[ti]);
+    }
+
+    // Add participants input
+    var addInput = document.getElementById('add-recipients-input');
+    if (addInput) {
+      addInput.oninput = function(e) { state.addRecipientsInput = e.target.value; };
+    }
+
+    var btnAdd = document.getElementById('btn-add-participants');
+    if (btnAdd) {
+      btnAdd.onclick = function() {
+        var raw = (document.getElementById('add-recipients-input') || {}).value || '';
+        var recipients = raw.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+        if (recipients.length === 0) {
+          state.error = 'At least one recipient is required';
+          render();
+          return;
+        }
+        addParticipants(recipients);
+      };
+    }
+  }
+
+  function updateSendButton() {
+    var btn = document.getElementById('btn-send-reply');
+    if (!btn) return;
+    var can = state.replyDraft.trim().length > 0 && !state.submittingReply;
+    btn.style.cursor = can ? 'pointer' : 'not-allowed';
+    btn.style.color = can ? '#03121a' : '#3c4e5e';
+    btn.style.background = can ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)';
+    btn.style.boxShadow = can ? '0 6px 20px -6px rgba(0,212,255,0.5)' : 'none';
+  }
+
+  // ── Actions ──────────────────────────────────────────────────
+
+  function handleSend() {
+    var txt = state.replyDraft.trim();
+    if (!txt || state.submittingReply) return;
+    sendReply(txt);
+  }
+
+  window.__toggleAddForm = function() {
+    state.showAddParticipant = !state.showAddParticipant;
+    state.addRecipientsInput = '';
+    state.error = null;
+    state.successMsg = null;
+    render();
+    if (state.showAddParticipant) {
+      setTimeout(function() {
+        var inp = document.getElementById('add-recipients-input');
+        if (inp) inp.focus();
+      }, 100);
+    }
+  };
+
+  window.__leave = function() {
+    leaveConversation();
+  };
+
+  // ── Boot ─────────────────────────────────────────────────────
+
+  if (!conversationId) {
+    document.getElementById('app').innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;font-family:\'Space Grotesk\',sans-serif;">' +
+        '<div style="font-size:48px;color:#00d4ff;opacity:0.5;">&#x274C;</div>' +
+        '<div style="font-size:18px;font-weight:600;color:#eaf7ff;">Invalid conversation</div>' +
+        '<a href="/conversations" style="color:#00d4ff;text-decoration:underline;font-size:14px;">Back to conversations</a>' +
+      '</div>';
+  } else {
+    fetchConversation();
+  }
+})();
+</script>
+</body>
+</html>

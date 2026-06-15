@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AETHER — Notifications</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #06070b;
+      color: #e0e4ec;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ===== CRT BACKGROUND ===== */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 100%, rgba(0,212,255,0.025) 0%, transparent 50%),
+        radial-gradient(ellipse at 20% 100%, rgba(0,212,255,0.02) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ===== GRID OVERLAY ===== */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ===== SCANLINES ===== */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* ===== CRT Flicker ===== */
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.998; }
+    }
+    .crt-flicker {
+      animation: flicker 0.15s infinite;
+    }
+
+    /* ===== GLOW UTILITIES ===== */
+    .text-glow {
+      text-shadow: 0 0 10px rgba(0,212,255,0.3), 0 0 30px rgba(0,212,255,0.1);
+    }
+    .border-glow {
+      box-shadow: 0 0 8px rgba(0,212,255,0.15), inset 0 0 8px rgba(0,212,255,0.03);
+    }
+
+    /* ===== LAYOUT ===== */
+    .app-wrapper {
+      position: relative;
+      z-index: 3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      max-width: 720px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ===== TOP BAR ===== */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(0,212,255,0.12);
+      background: rgba(6,7,11,0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #8892a4;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-family: 'JetBrains Mono', monospace;
+      transition: color 0.2s;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .back-link:hover { color: #00d4ff; }
+    .back-link svg { flex-shrink: 0; }
+
+    .logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 1.125rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #00d4ff;
+      text-decoration: none;
+    }
+    .logo span { color: #e0e4ec; }
+
+    /* ===== PAGE HEADER ===== */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 32px 0 20px;
+    }
+
+    .page-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .page-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 1.625rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #f0f4ff;
+    }
+
+    .unread-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: rgba(0,212,255,0.15);
+      color: #00d4ff;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,212,255,0.25);
+      min-width: 24px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .mark-all-btn {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #00d4ff;
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.2);
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      letter-spacing: 0.02em;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mark-all-btn:hover {
+      background: rgba(0,212,255,0.15);
+      border-color: rgba(0,212,255,0.4);
+      box-shadow: 0 0 12px rgba(0,212,255,0.1);
+    }
+    .mark-all-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .mark-all-btn .spinner {
+      display: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(0,212,255,0.2);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    .mark-all-btn.loading .spinner { display: inline-block; }
+    .mark-all-btn.loading .btn-text { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== NOTIFICATION LIST ===== */
+    .notifications-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-bottom: 32px;
+    }
+
+    /* ===== NOTIFICATION CARD ===== */
+    .notification-card {
+      display: flex;
+      gap: 14px;
+      padding: 16px 18px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(0,212,255,0.06);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .notification-card:hover {
+      background: rgba(0,212,255,0.04);
+      border-color: rgba(0,212,255,0.15);
+      box-shadow: 0 0 12px rgba(0,212,255,0.04);
+    }
+    .notification-card.unread {
+      border-color: rgba(0,212,255,0.15);
+      background: rgba(0,212,255,0.03);
+    }
+
+    .notif-icon {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      background: rgba(0,212,255,0.08);
+      color: #00d4ff;
+      border: 1px solid rgba(0,212,255,0.12);
+      margin-top: 2px;
+    }
+    .notif-icon.icon-reply { background: rgba(0,212,255,0.1); color: #00d4ff; }
+    .notif-icon.icon-like  { background: rgba(255,80,120,0.1); color: #ff5078; border-color: rgba(255,80,120,0.2); }
+    .notif-icon.icon-quote { background: rgba(255,200,50,0.1); color: #ffc832; border-color: rgba(255,200,50,0.2); }
+    .notif-icon.icon-mention { background: rgba(120,100,255,0.1); color: #7864ff; border-color: rgba(120,100,255,0.2); }
+
+    .notif-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notif-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 2px;
+    }
+
+    .notif-actor {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #f0f4ff;
+    }
+
+    .notif-action {
+      font-size: 0.8125rem;
+      color: #8892a4;
+    }
+
+    .notif-preview {
+      font-size: 0.8125rem;
+      color: #6b7488;
+      margin-top: 4px;
+      padding: 6px 10px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 4px;
+      border-left: 2px solid rgba(0,212,255,0.15);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-clamp: 2;
+      word-break: break-word;
+    }
+
+    .notif-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .notif-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6875rem;
+      color: #4a5268;
+    }
+
+    .notif-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: transparent;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .notif-dot.unread {
+      background: #00d4ff;
+      box-shadow: 0 0 6px rgba(0,212,255,0.5);
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #4a5268;
+    }
+    .empty-state .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+    .empty-state h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.125rem;
+      font-weight: 500;
+      color: #8892a4;
+      margin-bottom: 6px;
+    }
+    .empty-state p {
+      font-size: 0.875rem;
+      color: #4a5268;
+    }
+
+    /* ===== PAGINATION ===== */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 20px 0 40px;
+    }
+
+    .page-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8125rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,212,255,0.12);
+      background: transparent;
+      color: #8892a4;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .page-btn:hover:not(:disabled):not(.active) {
+      border-color: rgba(0,212,255,0.3);
+      color: #e0e4ec;
+    }
+    .page-btn.active {
+      background: rgba(0,212,255,0.12);
+      border-color: rgba(0,212,255,0.3);
+      color: #00d4ff;
+    }
+    .page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .page-info {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #4a5268;
+      padding: 0 8px;
+    }
+
+    /* ===== SIGN-IN PROMPT ===== */
+    .sign-in-prompt {
+      text-align: center;
+      padding: 80px 20px;
+    }
+    .sign-in-prompt .lock-icon {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+    .sign-in-prompt h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #8892a4;
+      margin-bottom: 8px;
+    }
+    .sign-in-prompt p {
+      font-size: 0.875rem;
+      color: #4a5268;
+      margin-bottom: 20px;
+    }
+    .sign-in-link {
+      display: inline-block;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 500;
+      font-size: 0.9375rem;
+      color: #06070b;
+      background: #00d4ff;
+      padding: 10px 28px;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .sign-in-link:hover {
+      box-shadow: 0 0 20px rgba(0,212,255,0.3);
+      transform: translateY(-1px);
+    }
+
+    /* ===== ERROR STATE ===== */
+    .error-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .error-state .err-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      opacity: 0.3;
+    }
+    .error-state h3 {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #ff5078;
+      margin-bottom: 6px;
+    }
+    .error-state p {
+      font-size: 0.8125rem;
+      color: #4a5268;
+    }
+
+    /* ===== LOADING ===== */
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(0,212,255,0.1);
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .loading-state p {
+      margin-top: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #4a5268;
+    }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(6,7,11,0.95);
+      border: 1px solid rgba(0,212,255,0.15);
+      backdrop-filter: blur(8px);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-family: 'Space Grotesk', sans-serif;
+      color: #e0e4ec;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      white-space: nowrap;
+      max-width: 90vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+    .toast.error {
+      border-color: rgba(255,80,120,0.3);
+    }
+    .toast.success {
+      border-color: rgba(0,212,255,0.3);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .container { padding: 0 12px; }
+      .top-bar { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+      .page-title { font-size: 1.25rem; }
+      .page-header { padding: 20px 0 16px; }
+      .notification-card { padding: 12px 14px; gap: 10px; }
+      .notif-icon { width: 30px; height: 30px; font-size: 0.875rem; }
+      .notif-header { flex-direction: column; gap: 2px; }
+      .mark-all-btn { font-size: 0.75rem; padding: 6px 14px; }
+      .pagination { flex-wrap: wrap; }
+      .page-btn { font-size: 0.75rem; padding: 5px 10px; }
+    }
+
+    @media (max-width: 400px) {
+      .page-title { font-size: 1.0625rem; }
+      .unread-badge { font-size: 0.625rem; padding: 1px 8px; }
+      .notif-preview { -webkit-line-clamp: 1; line-clamp: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="scanlines crt-flicker"></div>
+
+  <div class="app-wrapper">
+    <!-- ===== TOP BAR ===== -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <a href="/forum" class="back-link" aria-label="Back to Discussion Board">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Discussion Board
+        </a>
+        <a href="/" class="logo" aria-label="AETHER Home">
+          AETH<span>ER</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- ===== MAIN ===== -->
+    <main class="container">
+      <div id="app-root"></div>
+    </main>
+
+    <!-- ===== TOAST ===== -->
+    <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (function() {
+      'use strict';
+
+      // ================================================================
+      //  UTILITIES
+      // ================================================================
+
+      function esc(str) {
+        if (str == null) return '';
+        var d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+      }
+
+      function getToken() {
+        var match = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+        return match ? decodeURIComponent(match[1]) : null;
+      }
+
+      function timeAgo(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        var now = new Date();
+        var diff = Math.floor((now - d) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        if (diff < 2592000) return Math.floor(diff / 86400) + 'd ago';
+        return Math.floor(diff / 2592000) + 'mo ago';
+      }
+
+      // ================================================================
+      //  NOTIFICATION ICON MAP
+      // ================================================================
+
+      var ICONS = {
+        reply:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+        like:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>',
+        quote:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>',
+        mention: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"/></svg>'
+      };
+
+      var ICON_CLASSES = {
+        reply:   'icon-reply',
+        like:    'icon-like',
+        quote:   'icon-quote',
+        mention: 'icon-mention'
+      };
+
+      var ACTION_LABELS = {
+        reply:   'replied to your post',
+        like:    'liked your post',
+        quote:   'quoted your post',
+        mention: 'mentioned you'
+      };
+
+      // ================================================================
+      //  MOCK DATA
+      // ================================================================
+
+      var MOCK_NOTIFICATIONS = (function() {
+        var types = ['reply', 'like', 'quote', 'mention'];
+        var actors = ['cyber_fox', 'null_ptr', 'data_weaver', 'hex_runner', 'vex_core', 'neon_pulse', 'ash_void', 'signal_drift'];
+        var previews = [
+          'The end-to-end encryption approach you proposed is actually quite similar to what Signal uses with the Double Ratchet algorithm.',
+          'Have you considered using WebAuthn for the MFA flow? It integrates well with modern browsers.',
+          'This is exactly the kind of architecture we need for the distributed storage layer. Great write-up!',
+          'I hit the same issue last week. You need to check the certificate chain — it\'s likely a missing intermediate CA.',
+          'The performance benchmarks on the Rust rewrite are impressive. Nearly 3x throughput improvement.',
+          'We should probably discuss the threat model before settling on a token refresh strategy.',
+          'Loving the CRT aesthetic on the new UI. The scanlines effect really sells the retro feel.',
+          'I found a race condition in the connection pool handler. PR inbound with a fix.'
+        ];
+        var baseDate = Date.now() - 86400000 * 7;
+
+        var results = [];
+        for (var i = 0; i < 25; i++) {
+          var t = types[i % 4];
+          var actor = actors[i % actors.length];
+          var hours = i * 3 + Math.floor(Math.random() * 2);
+          var date = new Date(baseDate + hours * 3600000);
+          results.push({
+            id: 'mock_' + (i + 1),
+            type: t,
+            actor: actor,
+            action: ACTION_LABELS[t],
+            preview: previews[i % previews.length],
+            created_at: date.toISOString(),
+            read: i > 8,
+            link: '/thread/mock-' + (i + 1)
+          });
+        }
+        return results;
+      })();
+
+      // ================================================================
+      //  STATE
+      // ================================================================
+
+      var state = {
+        page: 1,
+        totalPages: 1,
+        total: 0,
+        unreadCount: 0,
+        notifications: [],
+        isLoading: false,
+        isAuthenticated: null
+      };
+
+      var root = document.getElementById('app-root');
+      var toastEl = document.getElementById('toast');
+      var toastTimer = null;
+
+      // ================================================================
+      //  TOAST
+      // ================================================================
+
+      function showToast(msg, type) {
+        toastEl.textContent = msg;
+        toastEl.className = 'toast ' + (type || 'success');
+        // force reflow
+        void toastEl.offsetWidth;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() {
+          toastEl.classList.remove('show');
+        }, 3500);
+      }
+
+      // ================================================================
+      //  API CALLS
+      // ================================================================
+
+      function apiFetch(url, options) {
+        options = options || {};
+        var token = getToken();
+        var headers = options.headers || {};
+        headers['Accept'] = 'application/json';
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        if (options.body && !(options.body instanceof FormData)) {
+          headers['Content-Type'] = 'application/json';
+        }
+        return fetch(url, {
+          method: options.method || 'GET',
+          headers: headers,
+          body: options.body || undefined,
+          credentials: 'include'
+        }).then(function(res) {
+          if (res.status === 401) {
+            state.isAuthenticated = false;
+            return res.json().then(function() { throw new Error('unauthorized'); });
+          }
+          state.isAuthenticated = true;
+          if (!res.ok) {
+            return res.json().then(function(d) {
+              var e = new Error(d.error || d.message || 'Request failed');
+              e.status = res.status;
+              throw e;
+            });
+          }
+          return res.json();
+        });
+      }
+
+      function fetchNotifications(page) {
+        state.isLoading = true;
+        render();
+        return apiFetch('/api/notifications?page=' + (page || 1))
+          .then(function(data) {
+            state.notifications = data.notifications || [];
+            state.total = data.total || 0;
+            state.unreadCount = data.unread_count || 0;
+            state.page = data.page || 1;
+            state.totalPages = data.totalPages || 1;
+            state.isAuthenticated = true;
+            state.isLoading = false;
+            render();
+          })
+          .catch(function(err) {
+            state.isLoading = false;
+            if (err.message === 'unauthorized') {
+              state.isAuthenticated = false;
+              state.notifications = [];
+              render();
+              return;
+            }
+            // Fall back to mock data
+            console.warn('API fallback to mock data:', err.message);
+            useMockData(page);
+          });
+      }
+
+      function useMockData(page) {
+        var perPage = 10;
+        var total = MOCK_NOTIFICATIONS.length;
+        var totalPages = Math.max(1, Math.ceil(total / perPage));
+        var p = Math.min(Math.max(1, page || 1), totalPages);
+        var start = (p - 1) * perPage;
+        var items = MOCK_NOTIFICATIONS.slice(start, start + perPage);
+        state.notifications = items;
+        state.total = total;
+        state.unreadCount = MOCK_NOTIFICATIONS.filter(function(n) { return !n.read; }).length;
+        state.page = p;
+        state.totalPages = totalPages;
+        state.isAuthenticated = true;
+        render();
+      }
+
+      function markNotificationRead(id) {
+        return apiFetch('/api/notifications/' + encodeURIComponent(id) + '/read', { method: 'POST' })
+          .then(function() {
+            // Update local state optimistically
+            state.notifications = state.notifications.map(function(n) {
+              if (n.id === id) n.read = true;
+              return n;
+            });
+            state.unreadCount = Math.max(0, state.unreadCount - 1);
+            // Re-fetch unread count
+            apiFetch('/api/notifications/unread-count').then(function(d) {
+              state.unreadCount = d.count || 0;
+            }).catch(function() {});
+            render();
+          })
+          .catch(function(err) {
+            console.warn('Failed to mark notification read:', err.message);
+          });
+      }
+
+      function markAllRead() {
+        var btn = document.querySelector('.mark-all-btn');
+        if (btn) btn.classList.add('loading');
+        return apiFetch('/api/notifications/read-all', { method: 'POST' })
+          .then(function() {
+            state.notifications = state.notifications.map(function(n) { n.read = true; return n; });
+            state.unreadCount = 0;
+            render();
+            showToast('All notifications marked as read', 'success');
+          })
+          .catch(function(err) {
+            console.warn('Failed to mark all read:', err.message);
+            showToast('Failed to mark all as read', 'error');
+          })
+          .finally(function() {
+            if (btn) btn.classList.remove('loading');
+          });
+      }
+
+      // ================================================================
+      //  RENDER
+      // ================================================================
+
+      function render() {
+        if (state.isAuthenticated === false) {
+          renderSignIn();
+          return;
+        }
+
+        if (state.isLoading) {
+          renderLoading();
+          return;
+        }
+
+        if (state.notifications.length === 0) {
+          renderEmpty();
+          return;
+        }
+
+        renderNotifications();
+      }
+
+      function renderSignIn() {
+        root.innerHTML = '';
+        var el = document.createElement('div');
+        el.className = 'sign-in-prompt';
+        el.innerHTML =
+          '<div class="lock-icon">&#x1f512;</div>' +
+          '<h2>Sign in to view notifications</h2>' +
+          '<p>You need to be authenticated to access your notifications.</p>' +
+          '<a href="/register" class="sign-in-link">Sign In</a>';
+        root.appendChild(el);
+      }
+
+      function renderLoading() {
+        root.innerHTML = '';
+        var el = document.createElement('div');
+        el.className = 'loading-state';
+        el.innerHTML =
+          '<div class="loading-spinner"></div>' +
+          '<p>Loading notifications…</p>';
+        root.appendChild(el);
+      }
+
+      function renderEmpty() {
+        root.innerHTML = '';
+        var el = document.createElement('div');
+        el.className = 'empty-state';
+        el.innerHTML =
+          '<div class="empty-icon">&#x1f4ec;</div>' +
+          '<h3>No notifications yet</h3>' +
+          '<p>When someone replies, likes, or mentions you, it will show up here.</p>';
+        root.appendChild(el);
+      }
+
+      function renderNotifications() {
+        root.innerHTML = '';
+
+        // ---- Page Header ----
+        var header = document.createElement('div');
+        header.className = 'page-header';
+
+        var titleWrap = document.createElement('div');
+        titleWrap.className = 'page-title-wrap';
+
+        var h1 = document.createElement('h1');
+        h1.className = 'page-title text-glow';
+        h1.textContent = 'NOTIFICATIONS';
+        titleWrap.appendChild(h1);
+
+        var badge = document.createElement('span');
+        badge.className = 'unread-badge';
+        badge.id = 'unread-badge';
+        badge.textContent = state.unreadCount;
+        titleWrap.appendChild(badge);
+        header.appendChild(titleWrap);
+
+        var markBtn = document.createElement('button');
+        markBtn.className = 'mark-all-btn';
+        markBtn.id = 'mark-all-btn';
+        markBtn.setAttribute('aria-label', 'Mark all notifications as read');
+        markBtn.innerHTML =
+          '<span class="spinner"></span>' +
+          '<span class="btn-text">Mark all read</span>';
+        markBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          markAllRead();
+        });
+        if (state.unreadCount === 0) markBtn.disabled = true;
+        header.appendChild(markBtn);
+
+        root.appendChild(header);
+
+        // ---- Notifications List ----
+        var list = document.createElement('div');
+        list.className = 'notifications-list';
+        list.id = 'notif-list';
+
+        state.notifications.forEach(function(n) {
+          var card = document.createElement('div');
+          card.className = 'notification-card' + (n.read ? '' : ' unread');
+          card.setAttribute('data-id', n.id);
+          card.setAttribute('data-link', n.link || '#');
+          card.setAttribute('data-read', n.read ? 'true' : 'false');
+          card.setAttribute('role', 'button');
+          card.setAttribute('tabindex', '0');
+          card.setAttribute('aria-label', 'Notification from ' + n.actor + ': ' + (n.action || ''));
+
+          // Icon
+          var iconDiv = document.createElement('div');
+          var ic = ICON_CLASSES[n.type] || 'icon-reply';
+          iconDiv.className = 'notif-icon ' + ic;
+          iconDiv.innerHTML = ICONS[n.type] || ICONS.reply;
+          card.appendChild(iconDiv);
+
+          // Content
+          var contentDiv = document.createElement('div');
+          contentDiv.className = 'notif-content';
+
+          var headerRow = document.createElement('div');
+          headerRow.className = 'notif-header';
+
+          var actorSpan = document.createElement('span');
+          actorSpan.className = 'notif-actor';
+          actorSpan.textContent = n.actor;
+          headerRow.appendChild(actorSpan);
+
+          var actionSpan = document.createElement('span');
+          actionSpan.className = 'notif-action';
+          actionSpan.textContent = n.action || ACTION_LABELS[n.type] || '';
+          headerRow.appendChild(actionSpan);
+
+          contentDiv.appendChild(headerRow);
+
+          // Preview
+          if (n.preview) {
+            var previewDiv = document.createElement('div');
+            previewDiv.className = 'notif-preview';
+            previewDiv.textContent = n.preview;
+            contentDiv.appendChild(previewDiv);
+          }
+
+          // Meta
+          var metaDiv = document.createElement('div');
+          metaDiv.className = 'notif-meta';
+
+          var timeSpan = document.createElement('span');
+          timeSpan.className = 'notif-time';
+          timeSpan.textContent = timeAgo(n.created_at);
+          metaDiv.appendChild(timeSpan);
+
+          var dotSpan = document.createElement('span');
+          dotSpan.className = 'notif-dot' + (n.read ? '' : ' unread');
+          metaDiv.appendChild(dotSpan);
+
+          contentDiv.appendChild(metaDiv);
+          card.appendChild(contentDiv);
+
+          // Click handler
+          card.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var link = this.getAttribute('data-link');
+            var id = this.getAttribute('data-id');
+            var isRead = this.getAttribute('data-read') === 'true';
+            if (!isRead) {
+              markNotificationRead(id).then(function() {
+                if (link && link !== '#') {
+                  window.location.href = link;
+                }
+              });
+            } else {
+              if (link && link !== '#') {
+                window.location.href = link;
+              }
+            }
+          });
+
+          // Keyboard support
+          card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              this.click();
+            }
+          });
+
+          list.appendChild(card);
+        });
+
+        root.appendChild(list);
+
+        // ---- Pagination ----
+        if (state.totalPages > 1) {
+          renderPagination();
+        }
+
+        // Update badge in case it changed
+        var badgeEl = document.getElementById('unread-badge');
+        if (badgeEl) badgeEl.textContent = state.unreadCount;
+
+        var markBtnEl = document.getElementById('mark-all-btn');
+        if (markBtnEl) markBtnEl.disabled = state.unreadCount === 0;
+      }
+
+      function renderPagination() {
+        var current = state.page;
+        var total = state.totalPages;
+        var wrap = document.createElement('div');
+        wrap.className = 'pagination';
+
+        // Prev
+        var prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.textContent = '❮ Prev';
+        prevBtn.disabled = current <= 1;
+        prevBtn.addEventListener('click', function() {
+          if (current > 1) goToPage(current - 1);
+        });
+        wrap.appendChild(prevBtn);
+
+        // Page numbers
+        var maxVisible = 5;
+        var startPage = Math.max(1, current - Math.floor(maxVisible / 2));
+        var endPage = Math.min(total, startPage + maxVisible - 1);
+        if (endPage - startPage < maxVisible - 1) {
+          startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        if (startPage > 1) {
+          var firstBtn = document.createElement('button');
+          firstBtn.className = 'page-btn';
+          firstBtn.textContent = '1';
+          firstBtn.addEventListener('click', function() { goToPage(1); });
+          wrap.appendChild(firstBtn);
+
+          if (startPage > 2) {
+            var ellipsis = document.createElement('span');
+            ellipsis.className = 'page-info';
+            ellipsis.textContent = '…';
+            wrap.appendChild(ellipsis);
+          }
+        }
+
+        for (var i = startPage; i <= endPage; i++) {
+          var btn = document.createElement('button');
+          btn.className = 'page-btn' + (i === current ? ' active' : '');
+          btn.textContent = String(i);
+          btn.addEventListener('click', (function(p) {
+            return function() { goToPage(p); };
+          })(i));
+          wrap.appendChild(btn);
+        }
+
+        if (endPage < total) {
+          if (endPage < total - 1) {
+            var ellipsis2 = document.createElement('span');
+            ellipsis2.className = 'page-info';
+            ellipsis2.textContent = '…';
+            wrap.appendChild(ellipsis2);
+          }
+          var lastBtn = document.createElement('button');
+          lastBtn.className = 'page-btn';
+          lastBtn.textContent = String(total);
+          lastBtn.addEventListener('click', function() { goToPage(total); });
+          wrap.appendChild(lastBtn);
+        }
+
+        // Next
+        var nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.textContent = 'Next ❯';
+        nextBtn.disabled = current >= total;
+        nextBtn.addEventListener('click', function() {
+          if (current < total) goToPage(current + 1);
+        });
+        wrap.appendChild(nextBtn);
+
+        root.appendChild(wrap);
+      }
+
+      function goToPage(page) {
+        if (page === state.page) return;
+        // Scroll to top smoothly
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        fetchNotifications(page);
+      }
+
+      // ================================================================
+      //  INIT
+      // ================================================================
+
+      function init() {
+        var token = getToken();
+        if (!token) {
+          state.isAuthenticated = false;
+          render();
+          return;
+        }
+        // Check auth with a lightweight endpoint first
+        apiFetch('/api/notifications/unread-count')
+          .then(function(data) {
+            state.isAuthenticated = true;
+            state.unreadCount = data.count || 0;
+            return fetchNotifications(1);
+          })
+          .catch(function(err) {
+            if (err.message === 'unauthorized') {
+              state.isAuthenticated = false;
+              render();
+            } else {
+              // API might not exist yet — use mock data
+              console.warn('API unavailable, using mock data:', err.message);
+              state.isAuthenticated = true;
+              useMockData(1);
+            }
+          });
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>

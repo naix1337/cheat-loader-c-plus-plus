@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversations — insolution.cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; font-family: 'Space Grotesk', system-ui, sans-serif; color: #c7d6e2; min-height: 100vh; }
+  @keyframes ct-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes ct-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.25; } }
+  @keyframes ct-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes ct-spin { to { transform: rotate(360deg); } }
+  @keyframes ct-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes ct-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  a { color: inherit; text-decoration: none; }
+  input, textarea, button, select { font-family: inherit; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 10px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+    color: #03121a; background: linear-gradient(180deg,#1ee0ff,#00a6cf);
+    box-shadow: 0 8px 24px -8px rgba(0,212,255,0.55); cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 28px -6px rgba(0,212,255,0.7); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 9px; border: 1px solid rgba(0,212,255,0.18);
+    font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600;
+    color: #9fc6dc; background: rgba(2,6,10,0.5); cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-secondary:hover { border-color: rgba(0,212,255,0.45); color: #cdeefb; }
+  .btn-danger {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 9px; border: 1px solid rgba(255,107,107,0.3);
+    font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600;
+    color: #ff8b8b; background: rgba(255,107,107,0.08); cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-danger:hover { border-color: rgba(255,107,107,0.6); background: rgba(255,107,107,0.15); }
+  .form-input {
+    width: 100%; padding: 10px 14px; border-radius: 9px;
+    background: rgba(2,6,10,0.6); border: 1px solid rgba(0,212,255,0.18);
+    outline: none; color: #d6e6f2; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: #00d4ff; }
+  .form-input::placeholder { color: #3c4e5e; }
+  .tag-cyan { color: #00d4ff; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.35); }
+  @media (max-width: 640px) {
+    .conv-card-grid { flex-direction: column; }
+    .page-wrap { padding: 14px 12px 40px !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;gap:12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#4f6478;">
+    <span style="width:16px;height:16px;border:2px solid rgba(0,212,255,0.2);border-top-color:#00d4ff;border-radius:50%;display:inline-block;animation:ct-spin 0.6s linear infinite;"></span>
+    LOADING CONVERSATIONS…
+  </div>
+</div>
+<script>
+(function() {
+  'use strict';
+
+  // ── Helpers ──────────────────────────────────────────────────
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = '' + s; return d.innerHTML; }
+  function escAttr(s) { return ('' + s).replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function getToken() {
+    var m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function apiHeaders() {
+    var h = { 'Content-Type': 'application/json' };
+    var t = getToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+
+  function fmtCount(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '' + n; }
+
+  function timeAgo(isoString) {
+    if (!isoString) return 'unknown';
+    var diff = Date.now() - new Date(isoString).getTime();
+    if (diff < 0) diff = 0;
+    var seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return seconds + 's ago';
+    var minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    var hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+    var days = Math.floor(hours / 24);
+    if (days < 30) return days + 'd ago';
+    var months = Math.floor(days / 30);
+    if (months < 12) return months + 'mo ago';
+    var years = Math.floor(months / 12);
+    return years + 'y ago';
+  }
+
+  function getCurrentUser() {
+    var token = getToken();
+    if (!token) return null;
+    try {
+      var parts = token.split('.');
+      var payload = JSON.parse(atob(parts[1]));
+      return { id: payload.sub, username: payload.username || 'user', rank: payload.rank || 'MEMBER' };
+    } catch(e) { return null; }
+  }
+
+  // ── Palette ──────────────────────────────────────────────────
+
+  var AVATAR_PALETTES = [
+    'linear-gradient(145deg,#1ee0ff,#0a7fa6)',
+    'linear-gradient(145deg,#b39dff,#6d4fd6)',
+    'linear-gradient(145deg,#3ef0a3,#1f9e72)',
+    'linear-gradient(145deg,#ffcf5c,#d49a17)',
+    'linear-gradient(145deg,#ff8b8b,#c74f4f)',
+    'linear-gradient(145deg,#7fd0ff,#3a86c7)',
+    'linear-gradient(145deg,#ff9ae6,#c456a8)',
+    'linear-gradient(145deg,#a8e6cf,#3d8a6a)',
+  ];
+
+  function getPalette(index) { return AVATAR_PALETTES[index % AVATAR_PALETTES.length]; }
+
+  // ── Mock data ────────────────────────────────────────────────
+
+  var MOCK_CONVERSATIONS = [
+    {
+      id: 'mock-1',
+      title: 'License key activation issue',
+      author_id: 'u2',
+      author_username: 'mara.exe',
+      open_invite: false,
+      last_message_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+      created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+      recipient_count: 3,
+      message_count: 12,
+      last_read_at: new Date(Date.now() - 86400000).toISOString(),
+      unread_count: 4,
+      last_message: {
+        id: 'lm1',
+        conversation_id: 'mock-1',
+        author_id: 'u2',
+        author_username: 'mara.exe',
+        content: 'I tried reinstalling but it still says invalid key. Can you check on your end?',
+        created_at: new Date(Date.now() - 2 * 3600000).toISOString()
+      }
+    },
+    {
+      id: 'mock-2',
+      title: 'New feature request: config sync',
+      author_id: 'u3',
+      author_username: 'syn',
+      open_invite: true,
+      last_message_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+      created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+      recipient_count: 2,
+      message_count: 8,
+      last_read_at: new Date(Date.now() - 12 * 3600000).toISOString(),
+      unread_count: 0,
+      last_message: {
+        id: 'lm2',
+        conversation_id: 'mock-2',
+        author_id: 'u3',
+        author_username: 'syn',
+        content: 'Would be great if we could sync configs across devices. Any plans for that?',
+        created_at: new Date(Date.now() - 12 * 3600000).toISOString()
+      }
+    },
+    {
+      id: 'mock-3',
+      title: 'Private: beta tester feedback',
+      author_id: 'u4',
+      author_username: 'gh0st',
+      open_invite: false,
+      last_message_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+      created_at: new Date(Date.now() - 86400000 * 14).toISOString(),
+      recipient_count: 5,
+      message_count: 34,
+      last_read_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+      unread_count: 0,
+      last_message: {
+        id: 'lm3',
+        conversation_id: 'mock-3',
+        author_id: 'u4',
+        author_username: 'gh0st',
+        content: 'The new aim smoothing is great. Found one edge case with the FOV slider though.',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+      }
+    },
+    {
+      id: 'mock-4',
+      title: 'Support: billing question',
+      author_id: 'u5',
+      author_username: 'newguy22',
+      open_invite: false,
+      last_message_at: new Date(Date.now() - 3600000 * 5).toISOString(),
+      created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+      recipient_count: 2,
+      message_count: 6,
+      last_read_at: new Date().toISOString(),
+      unread_count: 0,
+      last_message: {
+        id: 'lm4',
+        conversation_id: 'mock-4',
+        author_id: 'u1',
+        author_username: 'n0vakill',
+        content: 'I can see the charge on my statement. The subscription should auto-renew in 3 days.',
+        created_at: new Date(Date.now() - 3600000 * 5).toISOString()
+      }
+    },
+  ];
+
+  var MOCK_TOTAL = 4;
+  var MOCK_TOTAL_PAGES = 1;
+
+  // ── State ────────────────────────────────────────────────────
+
+  var state = {
+    currentUser: getCurrentUser(),
+    conversations: [],
+    total: 0,
+    page: 1,
+    totalPages: 0,
+    loading: true,
+    apiAvailable: false,
+    showNewForm: false,
+    newForm: { recipients: '', title: '', content: '' },
+    submitting: false,
+    error: null,
+  };
+
+  // ── API ──────────────────────────────────────────────────────
+
+  async function fetchConversations(page) {
+    state.loading = true;
+    state.error = null;
+    render();
+
+    try {
+      var res = await fetch('/api/conversations?page=' + (page || 1), { headers: apiHeaders() });
+      if (!res.ok) throw new Error('API returned ' + res.status);
+      var data = await res.json();
+      state.conversations = data.conversations || [];
+      state.total = data.total || 0;
+      state.page = data.page || 1;
+      state.totalPages = data.totalPages || 0;
+      state.apiAvailable = true;
+    } catch(e) {
+      console.warn('API unavailable, using mock data:', e.message);
+      state.conversations = MOCK_CONVERSATIONS;
+      state.total = MOCK_TOTAL;
+      state.page = 1;
+      state.totalPages = MOCK_TOTAL_PAGES;
+      state.apiAvailable = false;
+    } finally {
+      state.loading = false;
+      render();
+    }
+  }
+
+  async function createConversation(title, recipients, content) {
+    state.submitting = true;
+    render();
+
+    try {
+      var res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({ title: title, recipients: recipients, content: content })
+      });
+      if (!res.ok) throw new Error('API returned ' + res.status);
+      var data = await res.json();
+      state.submitting = false;
+      state.showNewForm = false;
+      state.newForm = { recipients: '', title: '', content: '' };
+      // Navigate to the new conversation
+      if (data.conversation && data.conversation.id) {
+        window.location.href = '/conversations/' + data.conversation.id;
+      } else {
+        fetchConversations(1);
+      }
+    } catch(e) {
+      console.warn('API create failed, using local fallback:', e.message);
+      // Local fallback: add mock conversation
+      var user = state.currentUser;
+      var mockConv = {
+        id: 'local-' + Date.now(),
+        title: title,
+        author_id: user ? user.id : 'u1',
+        author_username: user ? user.username : 'user',
+        open_invite: false,
+        last_message_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        recipient_count: recipients.length + 1,
+        message_count: 1,
+        last_read_at: new Date().toISOString(),
+        unread_count: 0,
+        last_message: {
+          id: 'lm-local-' + Date.now(),
+          conversation_id: 'local-' + Date.now(),
+          author_id: user ? user.id : 'u1',
+          author_username: user ? user.username : 'user',
+          content: content,
+          created_at: new Date().toISOString()
+        }
+      };
+      state.conversations.unshift(mockConv);
+      state.total++;
+      state.submitting = false;
+      state.showNewForm = false;
+      state.newForm = { recipients: '', title: '', content: '' };
+      render();
+    }
+  }
+
+  // ── Render ──────────────────────────────────────────────────
+
+  function render() {
+    var app = document.getElementById('app');
+    var user = state.currentUser;
+    var convs = state.conversations;
+    var userName = user ? user.username : 'Guest';
+    var userInitial = userName[0].toUpperCase();
+
+    // Data source indicator
+    var indicatorHtml = '';
+    if (state.loading) {
+      indicatorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#00d4ff;animation:ct-pulse 1.5s ease infinite;">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#00d4ff;display:inline-block;"></span>' +
+          'Fetching conversations…' +
+        '</div>';
+    } else if (state.apiAvailable) {
+      indicatorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;background:rgba(62,240,163,0.08);border:1px solid rgba(62,240,163,0.2);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#3ef0a3;">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#3ef0a3;display:inline-block;box-shadow:0 0 6px #3ef0a3;"></span>' +
+          'LIVE — data loaded from server' +
+        '</div>';
+    }
+
+    // Error banner
+    var errorHtml = '';
+    if (state.error) {
+      errorHtml =
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);margin-bottom:12px;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#ff8b8b;">' +
+          '<span style="font-size:14px;">!</span>' + esc(state.error) +
+        '</div>';
+    }
+
+    // Conversation cards
+    var cardsHtml = '';
+    if (!state.loading && convs.length === 0) {
+      cardsHtml =
+        '<div style="text-align:center;padding:60px 20px;border-radius:16px;background:rgba(16,22,30,0.5);border:1px solid rgba(0,212,255,0.1);">' +
+          '<div style="font-size:40px;margin-bottom:14px;opacity:0.5;">&#x1F4AC;</div>' +
+          '<div style="font-size:18px;font-weight:600;color:#eaf7ff;margin-bottom:6px;">No conversations yet</div>' +
+          '<div style="font-size:13px;color:#54697b;max-width:300px;margin:0 auto;">Start a new conversation to begin messaging with other members.</div>' +
+          '<div style="margin-top:20px;"><button class="btn-primary" onclick="window.__toggleNewForm()">NEW CONVERSATION</button></div>' +
+        '</div>';
+    } else {
+      for (var i = 0; i < convs.length; i++) {
+        var c = convs[i];
+        var isUnread = c.unread_count > 0;
+        var lm = c.last_message;
+        var preview = lm ? lm.content : 'No messages yet';
+        var previewTrimmed = preview.length > 100 ? preview.slice(0, 100) + '…' : preview;
+        var time = lm ? timeAgo(lm.created_at) : timeAgo(c.created_at);
+        var lastAuthor = lm && lm.author_username ? lm.author_username + ': ' : '';
+        var pal = getPalette(i);
+        // Find participants to show (exclude self if possible)
+        var otherInitial = c.author_username ? c.author_username[0].toUpperCase() : '?';
+
+        cardsHtml +=
+          '<a href="/conversations/' + escAttr(c.id) + '" style="display:block;text-decoration:none;">' +
+          '<div class="conv-card" style="border-radius:14px;overflow:hidden;background:linear-gradient(180deg,' + (isUnread ? 'rgba(0,212,255,0.08)' : 'rgba(16,22,30,0.72)') + ',rgba(9,12,17,0.8));border:1px solid ' + (isUnread ? 'rgba(0,212,255,0.35)' : 'rgba(0,212,255,0.14)') + ';box-shadow:0 14px 40px -28px rgba(0,0,0,0.9);margin-bottom:11px;transition:border-color 0.2s, transform 0.15s;animation:ct-rise 0.3s ease both;animation-delay:' + (i * 0.04) + 's;" onmouseenter="this.style.borderColor=\'rgba(0,212,255,0.5)\';this.style.transform=\'translateY(-1px)\'" onmouseleave="this.style.borderColor=\'' + (isUnread ? 'rgba(0,212,255,0.35)' : 'rgba(0,212,255,0.14)') + '\';this.style.transform=\'translateY(0)\'">' +
+            '<div style="display:flex;align-items:center;gap:14px;padding:16px;">' +
+              // Avatar
+              '<div style="position:relative;width:46px;height:46px;flex:none;border-radius:12px;background:' + pal + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#03121a;box-shadow:0 0 16px -4px ' + (isUnread ? 'rgba(0,212,255,0.6)' : 'rgba(0,212,255,0.2)') + ';">' +
+                esc(otherInitial) +
+                (isUnread ? '<span style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#00d4ff;border:2px solid #06070b;box-shadow:0 0 8px rgba(0,212,255,0.8);"></span>' : '') +
+              '</div>' +
+              // Content
+              '<div style="min-width:0;flex:1;">' +
+                '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;">' +
+                  '<span style="font-size:15px;font-weight:' + (isUnread ? '700' : '600') + ';color:' + (isUnread ? '#eaf7ff' : '#c7d6e2') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;">' + esc(c.title) + '</span>' +
+                  (isUnread ? '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:5px;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.4);color:#00d4ff;">NEW</span>' : '') +
+                  '<span style="margin-left:auto;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#44586a;white-space:nowrap;">' + esc(time) + '</span>' +
+                '</div>' +
+                '<div style="font-size:13px;color:#7f9bb0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">' +
+                  '<span style="color:#54697b;">' + esc(lastAuthor) + '</span>' + esc(previewTrimmed) +
+                '</div>' +
+                '<div style="display:flex;align-items:center;gap:12px;margin-top:5px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#44586a;">' +
+                  '<span>' + fmtCount(c.recipient_count) + ' participant' + (c.recipient_count !== 1 ? 's' : '') + '</span>' +
+                  '<span>' + fmtCount(c.message_count) + ' message' + (c.message_count !== 1 ? 's' : '') + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '</a>';
+      }
+    }
+
+    // Pagination
+    var paginationHtml = '';
+    if (state.totalPages > 1) {
+      paginationHtml =
+        '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;font-family:\'JetBrains Mono\',monospace;font-size:12px;">' +
+          '<button class="btn-secondary" onclick="window.__goPage(' + (state.page - 1) + ')" ' + (state.page <= 1 ? 'disabled' : '') + ' style="' + (state.page <= 1 ? 'opacity:0.3;cursor:not-allowed;' : '') + '">PREV</button>' +
+          '<span style="color:#54697b;padding:0 8px;">PAGE ' + state.page + ' / ' + state.totalPages + '</span>' +
+          '<button class="btn-secondary" onclick="window.__goPage(' + (state.page + 1) + ')" ' + (state.page >= state.totalPages ? 'disabled' : '') + ' style="' + (state.page >= state.totalPages ? 'opacity:0.3;cursor:not-allowed;' : '') + '">NEXT</button>' +
+        '</div>';
+    }
+
+    // New conversation form
+    var newFormHtml = '';
+    if (state.showNewForm) {
+      var nf = state.newForm;
+      newFormHtml =
+        '<div style="border-radius:14px;overflow:hidden;background:linear-gradient(180deg,rgba(18,24,33,0.85),rgba(10,13,18,0.9));border:1px solid rgba(0,212,255,0.28);box-shadow:0 0 44px -16px rgba(0,212,255,0.45);margin-bottom:18px;">' +
+          '<div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(0,212,255,0.12);">' +
+            '<span style="font-size:14px;font-weight:700;color:#eaf7ff;">New Conversation</span>' +
+            '<button class="btn-secondary" onclick="window.__toggleNewForm()" style="margin-left:auto;padding:4px 10px;font-size:11px;">CLOSE</button>' +
+          '</div>' +
+          '<div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px;">' +
+            '<div>' +
+              '<label style="display:block;font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1px;color:#54697b;margin-bottom:5px;">RECIPIENTS (comma-separated usernames or IDs)</label>' +
+              '<input class="form-input" id="nf-recipients" type="text" placeholder="username1, username2" value="' + esc(nf.recipients) + '">' +
+            '</div>' +
+            '<div>' +
+              '<label style="display:block;font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1px;color:#54697b;margin-bottom:5px;">TITLE</label>' +
+              '<input class="form-input" id="nf-title" type="text" placeholder="Conversation subject" value="' + esc(nf.title) + '">' +
+            '</div>' +
+            '<div>' +
+              '<label style="display:block;font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1px;color:#54697b;margin-bottom:5px;">MESSAGE</label>' +
+              '<textarea class="form-input" id="nf-content" rows="4" placeholder="Write your first message…" style="resize:vertical;min-height:80px;">' + esc(nf.content) + '</textarea>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+              '<button class="btn-primary" id="btn-create-conv" ' + (state.submitting ? 'disabled' : '') + '>' +
+                (state.submitting ? 'CREATING…' : 'START CONVERSATION') +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // Build full page HTML
+    app.innerHTML =
+      '<div style="position:relative;min-height:100vh;font-family:\'Space Grotesk\',system-ui,sans-serif;background:radial-gradient(130% 80% at 50% -10%,#0d1622 0%,#0a0a0f 46%,#060709 100%);color:#c7d6e2;">' +
+        // CRT overlays
+        '<div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);pointer-events:none;"></div>' +
+        '<div style="position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.18) 3px);background-size:100% 6px;animation:ct-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.5;"></div>' +
+        '<div style="position:fixed;top:-160px;left:50%;width:720px;height:360px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,0.13),transparent 70%);filter:blur(30px);pointer-events:none;"></div>' +
+        '<div class="page-wrap" style="position:relative;z-index:1;max-width:720px;margin:0 auto;padding:20px 22px 64px;">' +
+
+        // TOP BAR
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px;margin-bottom:18px;">' +
+          '<a href="/" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:9px 14px;border-radius:10px;background:rgba(16,22,30,0.7);border:1px solid rgba(0,212,255,0.18);color:#9fc6dc;font-size:13px;font-weight:600;" onmouseenter="this.style.borderColor=\'rgba(0,212,255,0.45)\';this.style.color=\'#cdeefb\'" onmouseleave="this.style.borderColor=\'rgba(0,212,255,0.18)\';this.style.color=\'#9fc6dc\'">' +
+            '<span style="color:#00d4ff;font-size:15px;">&#x2039;</span> Home' +
+          '</a>' +
+          '<div style="display:flex;align-items:center;gap:9px;margin-left:auto;">' +
+            '<a href="/" style="display:flex;align-items:center;gap:9px;text-decoration:none;">' +
+              '<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:8px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 14px -2px rgba(0,212,255,0.5);">' +
+                '<div style="width:11px;height:11px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 9px #00d4ff;"></div>' +
+              '</div>' +
+              '<div style="font-size:15px;font-weight:700;letter-spacing:2.5px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,0.5);">AETHER</div>' +
+            '</a>' +
+          '</div>' +
+        '</div>' +
+
+        // PAGE HEADER
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">' +
+          '<div>' +
+            '<h1 style="margin:0;font-size:24px;font-weight:700;color:#eaf7ff;letter-spacing:0.3px;text-shadow:0 0 18px rgba(0,212,255,0.3);display:flex;align-items:center;gap:12px;">' +
+              'CONVERSATIONS' +
+              '<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:400;color:#54697b;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);padding:3px 10px;border-radius:999px;">' + fmtCount(state.total) + '</span>' +
+            '</h1>' +
+          '</div>' +
+          '<button class="btn-primary" onclick="window.__toggleNewForm()">+ NEW</button>' +
+        '</div>' +
+
+        indicatorHtml +
+        errorHtml +
+        newFormHtml +
+
+        // CONVERSATIONS LIST
+        '<div style="display:flex;flex-direction:column;">' + cardsHtml + '</div>' +
+
+        paginationHtml +
+
+      '</div>' +
+    '</div>';
+
+    // Bind events for form
+    bindEvents();
+  }
+
+  // ── Event binding ────────────────────────────────────────────
+
+  function bindEvents() {
+    // Live sync form fields
+    var recipientsInput = document.getElementById('nf-recipients');
+    if (recipientsInput) {
+      recipientsInput.oninput = function(e) { state.newForm.recipients = e.target.value; };
+    }
+    var titleInput = document.getElementById('nf-title');
+    if (titleInput) {
+      titleInput.oninput = function(e) { state.newForm.title = e.target.value; };
+    }
+    var contentInput = document.getElementById('nf-content');
+    if (contentInput) {
+      contentInput.oninput = function(e) { state.newForm.content = e.target.value; };
+    }
+
+    var btnCreate = document.getElementById('btn-create-conv');
+    if (btnCreate) {
+      btnCreate.onclick = function() {
+        var title = (document.getElementById('nf-title') || {}).value || '';
+        var recipientsRaw = (document.getElementById('nf-recipients') || {}).value || '';
+        var content = (document.getElementById('nf-content') || {}).value || '';
+        var recipients = recipientsRaw.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+        if (!title.trim()) { state.error = 'Title is required'; render(); return; }
+        if (recipients.length === 0) { state.error = 'At least one recipient is required'; render(); return; }
+        if (!content.trim()) { state.error = 'Message is required'; render(); return; }
+        state.error = null;
+        createConversation(title.trim(), recipients, content.trim());
+      };
+    }
+  }
+
+  // ── Navigation helpers ──────────────────────────────────────
+
+  window.__toggleNewForm = function() {
+    state.showNewForm = !state.showNewForm;
+    state.error = null;
+    if (!state.showNewForm) {
+      state.newForm = { recipients: '', title: '', content: '' };
+    }
+    render();
+  };
+
+  window.__goPage = function(page) {
+    if (page < 1 || page > state.totalPages) return;
+    fetchConversations(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ── Boot ─────────────────────────────────────────────────────
+
+  fetchConversations(1);
+})();
+</script>
+</body>
+</html>
