@@ -1,6 +1,7 @@
 #include "ui/views/DashboardView.h"
 #include "ui/components/Button.h"
 #include "ui/theme/Theme.h"
+using namespace ui::theme;
 #include <imgui.h>
 #include <cmath>
 #include <format>

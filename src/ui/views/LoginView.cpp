@@ -2,6 +2,7 @@
 #include "ui/components/Button.h"
 #include "ui/components/InputField.h"
 #include "ui/theme/Theme.h"
+using namespace ui::theme;
 #include <Windows.h>
 #include <shellapi.h>
 #include <imgui.h>
