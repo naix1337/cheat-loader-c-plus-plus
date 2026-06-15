@@ -3,263 +3,388 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AETHER Secure Loader</title>
+<title>Insolution</title>
 <script src="./bridge.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,-apple-system,sans-serif;background:#06070b;color:#c7d6e2;overflow:hidden}
-  .card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:480px;border-radius:18px;padding:26px;background:linear-gradient(180deg,rgba(18,24,33,0.95),rgba(10,13,18,0.95));border:1px solid rgba(0,212,255,0.3);box-shadow:0 0 60px -12px rgba(0,212,255,0.35)}
-  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-  .logo{display:flex;align-items:center;gap:12px}
-  .diamond{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,.5);border-radius:8px;background:linear-gradient(145deg,rgba(0,212,255,.16),transparent);box-shadow:0 0 14px -2px rgba(0,212,255,.5)}
-  .diamond-inner{width:11px;height:11px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 9px #00d4ff}
-  .title{font-size:17px;font-weight:700;letter-spacing:3px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,.5)}
-  .subtitle{font-size:10px;letter-spacing:2px;color:#5d7488;margin-top:2px}
-  .version{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;color:#8b5cf6;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1)}
-  .sep{height:1px;margin:18px 0;background:linear-gradient(90deg,transparent,rgba(0,212,255,.35),transparent)}
-  .status-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-  .status-label{font-size:10px;letter-spacing:2px;color:#4f6478}
-  .status-dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 10px var(--status-color)}
-  .status-text{font-size:17px;font-weight:600;letter-spacing:1px;color:#e8f4ff}
-  .badge{padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1.5px;white-space:nowrap}
-  .segments{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:18px}
-  .seg{height:4px;border-radius:3px;background:rgba(0,212,255,.15);transition:background .4s}
-  .seg.active{background:#00d4ff;box-shadow:0 0 10px rgba(0,212,255,.6)}
-  .prog-label{display:flex;justify-content:space-between;font-size:10px;letter-spacing:2px;color:#4f6478;margin-bottom:6px}
-  .prog-pct{font-size:15px;font-weight:700;color:#00d4ff;text-shadow:0 0 10px rgba(0,212,255,.6)}
-  .prog-bar{position:relative;height:9px;border-radius:6px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.16);overflow:hidden;margin-bottom:18px}
-  .prog-fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#0094c7,#00d4ff);border-radius:6px;transition:width .18s linear;box-shadow:0 0 14px rgba(0,212,255,.7)}
-  .prog-shimmer{position:absolute;top:0;bottom:0;width:40px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:shimmer 1.6s linear infinite}
-  .console{height:176px;border-radius:11px;border:1px solid rgba(0,212,255,.16);background:linear-gradient(180deg,rgba(2,5,9,.95),rgba(4,8,12,.95));overflow:hidden;margin-bottom:18px}
-  .console-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid rgba(0,212,255,.12)}
-  .dot{width:8px;height:8px;border-radius:50%}
-  .console-title{margin-left:6px;font-size:10px;letter-spacing:1.5px;color:#43586b}
-  .log-area{height:134px;overflow-y:auto;padding:9px 12px;font-size:11.5px;line-height:1.62;font-family:'Courier New',monospace}
-  .log-area::-webkit-scrollbar{width:6px}
-  .log-area::-webkit-scrollbar-thumb{background:rgba(0,212,255,.25);border-radius:8px}
-  .log-line{display:flex;gap:9px;opacity:0;animation:fadeIn .3s ease forwards}
-  .log-time{color:#3a4d5e;flex:none}
-  .log-tag{color:#44586a;flex:none}
-  .log-text{word-break:break-word}
-  .cursor-line{display:flex;gap:9px}
-  .cursor-text{color:#3a4d5e}
-  .cursor-blink{display:inline-block;width:7px;height:13px;background:#00d4ff;margin-left:2px;animation:blink 1s steps(1) infinite;box-shadow:0 0 6px #00d4ff;vertical-align:-2px}
-  .launch-btn{width:100%;padding:15px;border-radius:12px;font-size:15px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all .15s;margin-bottom:14px}
-  .launch-btn:disabled{cursor:not-allowed;opacity:.5}
-  .footer{display:flex;justify-content:space-between;font-size:10px;letter-spacing:1px;color:#3c4e5e}
-  .status-bar{display:flex;justify-content:space-between;padding-top:14px;border-top:1px solid rgba(0,212,255,.12);font-size:10px;color:#455468}
-  @keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(400%)}}
-  @keyframes fadeIn{to{opacity:1}}
+  body{font-family:'Space Grotesk',system-ui,-apple-system,sans-serif;background:#06070b;color:#c7d6e2;overflow:hidden}
+  @keyframes scan{from{background-position:0 0}to{background-position:0 6px}}
+  @keyframes scanband{from{transform:translateY(-100%)}to{transform:translateY(560px)}}
+  @keyframes shimmer{0%{transform:translateX(-160%)skewX(-18deg)}100%{transform:translateX(360%)skewX(-18deg)}}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.55),0 10px 30px -8px rgba(0,212,255,.45)}50%{box-shadow:0 0 26px 2px rgba(0,212,255,.65),0 10px 38px -6px rgba(0,212,255,.6)}}
   @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  @keyframes flicker{0%,100%{opacity:1}92%{opacity:1}94%{opacity:.55}96%{opacity:1}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;overflow:hidden;background:radial-gradient(120% 90% at 50% -10%,#0d1622,#0a0a0f 48%,#060709)}
+  .grid{position:absolute;inset:-2px;background-image:linear-gradient(rgba(0,212,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.045) 1px,transparent 1px);background-size:42px 42px;mask-image:radial-gradient(80% 70% at 50% 40%,#000 30%,transparent 100%);-webkit-mask-image:radial-gradient(80% 70% at 50% 40%,#000 30%,transparent 100%);pointer-events:none}
+  .scanlines{position:absolute;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.22) 3px);background-size:100% 6px;animation:scan .5s steps(3) infinite;pointer-events:none;opacity:.6}
+  .glow-top{position:absolute;top:-120px;left:50%;width:520px;height:320px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,.18),transparent 70%);filter:blur(20px);pointer-events:none}
+  .glow-bot{position:absolute;bottom:-140px;left:30%;width:460px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.14),transparent 70%);filter:blur(24px);pointer-events:none}
+  .card{position:relative;width:min(480px,100%);border-radius:18px;padding:26px 26px 24px;background:linear-gradient(180deg,rgba(18,24,33,.82),rgba(10,13,18,.86));backdrop-filter:blur(22px)saturate(140%);-webkit-backdrop-filter:blur(22px)saturate(140%);border:1px solid rgba(0,212,255,.28);box-shadow:0 0 0 1px rgba(0,212,255,.06),0 0 60px -12px rgba(0,212,255,.35),0 30px 80px -30px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+  .scanband{position:absolute;left:0;right:0;top:0;height:60px;background:linear-gradient(180deg,rgba(0,212,255,.1),transparent);animation:scanband 4.5s linear infinite;pointer-events:none}
+  .header{display:flex;align-items:center;justify-content:space-between;position:relative}
+  .logo{display:flex;align-items:center;gap:12px}
+  .diamond-box{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,.5);border-radius:10px;background:linear-gradient(145deg,rgba(0,212,255,.16),rgba(0,212,255,.02));box-shadow:0 0 18px -2px rgba(0,212,255,.5),inset 0 0 12px rgba(0,212,255,.18);animation:flicker 5s infinite}
+  .diamond{width:13px;height:13px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 12px #00d4ff}
+  .title{font-size:18px;font-weight:700;letter-spacing:3px;color:#eaf7ff;text-shadow:0 0 14px rgba(0,212,255,.6)}
+  .subtitle{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#5d7488;margin-top:5px}
+  .badge{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:1px;font-family:'JetBrains Mono',monospace}
+  .sep{height:1px;margin:20px 0 18px;background:linear-gradient(90deg,transparent,rgba(0,212,255,.35),transparent)}
+  .field-label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:#5d7488;margin-bottom:7px}
+  .field{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:11px;background:rgba(2,6,10,.6);border:1px solid rgba(0,212,255,.2);margin-bottom:15px;transition:border .2s}
+  .field-icon{color:#4f6478;font-size:12px}
+  .field-input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:#e8f4ff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:500}
+  .field-input.pw{font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:2px}
+  .field-input::placeholder{color:#3c4e5e}
+  .info-row{display:flex;align-items:center;justify-content:space-between;margin:15px 2px 18px}
+  .remember{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:#7f9bb0}
+  .check-box{width:16px;height:16px;border-radius:5px;border:1px solid rgba(0,212,255,.4);display:flex;align-items:center;justify-content:center;color:#03121a;font-size:11px;font-weight:700;transition:all .15s}
+  .check-box.on{background:#00d4ff;border-color:#00d4ff}
+  .forgot-key{font-family:'JetBrains Mono',monospace;font-size:11px;color:#4f6478;cursor:pointer}
+  .login-btn{width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;font-size:15px;font-weight:700;letter-spacing:3px;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .12s,filter .2s,opacity .2s}
+  .login-btn:disabled{cursor:not-allowed;opacity:.5}
+  .login-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .store-link{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8b5cf6;text-decoration:none}
+  .store-link:hover{color:#b39dff}
+  .status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .status-section{min-width:0}
+  .status-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#4f6478;margin-bottom:6px}
+  .status-indicator{display:flex;align-items:center;gap:9px}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .status-phase{font-size:17px;font-weight:600;letter-spacing:1px;color:#e8f4ff;white-space:nowrap}
+  .status-badge{padding:6px 12px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;white-space:nowrap}
+  .segments{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:18px}
+  .seg{height:4px;border-radius:3px;background:#26323d;transition:background .4s,box-shadow .4s}
+  .seg.on{background:#00d4ff;box-shadow:0 0 10px rgba(0,212,255,.6)}
+  .prog-section{margin-bottom:18px}
+  .prog-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .prog-header span{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#4f6478}
+  .prog-pct{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#00d4ff;text-shadow:0 0 10px rgba(0,212,255,.6)}
+  .prog-bar{position:relative;height:9px;border-radius:6px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.16);overflow:hidden}
+  .prog-fill{position:absolute;inset:0 auto 0 0;width:0%;background:linear-gradient(90deg,#0094c7,#00d4ff);border-radius:6px;transition:width .18s linear;box-shadow:0 0 14px rgba(0,212,255,.7)}
+  .prog-shimmer{position:absolute;top:0;bottom:0;right:0;width:40px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:shimmer 1.6s linear infinite}
+  .console{height:176px;border-radius:11px;border:1px solid rgba(0,212,255,.16);background:linear-gradient(180deg,rgba(2,5,9,.92),rgba(4,8,12,.92));box-shadow:inset 0 0 24px rgba(0,0,0,.6);overflow:hidden;margin-bottom:18px}
+  .console-bar{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid rgba(0,212,255,.12)}
+  .console-dot{width:8px;height:8px;border-radius:50%}
+  .console-title{margin-left:6px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#43586b}
+  .console-log{height:134px;overflow-y:auto;padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.62}
+  .console-log::-webkit-scrollbar{width:6px}
+  .console-log::-webkit-scrollbar-thumb{background:rgba(0,212,255,.2);border-radius:8px}
+  .log-line{display:flex;gap:9px;animation:rise .3s ease both}
+  .log-time{color:#3a4d5e;flex:none}
+  .log-tagc{color:#44586a}
+  .launch-btn{margin-top:18px;width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;font-size:15px;font-weight:700;letter-spacing:3px;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .12s,filter .2s}
+  .launch-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .launch-btn:disabled{cursor:not-allowed}
+  .spinner{width:14px;height:14px;border:2px solid rgba(3,18,26,.35);border-top-color:#03121a;border-radius:50%;display:inline-block;animation:spin .6s linear infinite}
+  .footer{display:flex;justify-content:space-between;margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:#3c4e5e}
+  .err{font-family:'JetBrains Mono',monospace;font-size:11px;color:#ff8b6b;margin:9px 2px 0}
 </style>
 </head>
 <body>
-<div class="card" id="app">
-  <div class="header">
-    <div class="logo">
-      <div class="diamond"><div class="diamond-inner"></div></div>
-      <div><div class="title" id="appTitle">AETHER</div><div class="subtitle">SECURE MODULE LOADER</div></div>
-    </div>
-    <div class="version" id="versionBadge">v1.0.0</div>
-  </div>
-  <div class="sep"></div>
+<div class="bg">
+  <div class="grid"></div>
+  <div class="scanlines"></div>
+  <div class="glow-top"></div>
+  <div class="glow-bot"></div>
+  <div class="card">
+    <div class="scanband"></div>
 
-  <div class="status-row">
-    <div><div class="status-label">STATUS</div>
-      <div style="display:flex;align-items:center;gap:9px;margin-top:6px">
-        <div class="status-dot" id="statusDot" style="--status-color:#3ef0a3;background:#3ef0a3"></div>
-        <div class="status-text" id="statusText">INITIALIZING</div>
+    <!-- HEADER (same for login + loader) -->
+    <div class="header">
+      <div class="logo">
+        <div class="diamond-box"><div class="diamond"></div></div>
+        <div>
+          <div class="title" id="appTitle">Insolution</div>
+          <div class="subtitle" id="headerSub">SECURE ACCESS PORTAL</div>
+        </div>
+      </div>
+      <div class="badge" id="headerBadge" style="color:#3ef0a3;border:1px solid rgba(62,240,163,.35);background:rgba(62,240,163,.08)">● ENCRYPTED</div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- ──── LOGIN VIEW ──── -->
+    <div id="loginView">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#4f6478;margin-bottom:16px">MEMBER SIGN-IN</div>
+
+      <label class="field-label">USERNAME</label>
+      <div class="field" id="userField">
+        <span class="field-icon">◇</span>
+        <input class="field-input" id="userInput" placeholder="your handle" autocomplete="off" />
+      </div>
+
+      <label class="field-label">LICENSE KEY</label>
+      <div class="field" id="passField">
+        <span class="field-icon">⬡</span>
+        <input class="field-input pw" id="passInput" type="password" placeholder="••••-••••-••••" />
+      </div>
+
+      <div id="loginError" class="err" style="display:none"></div>
+
+      <div class="info-row">
+        <div class="remember" id="rememberBtn">
+          <div class="check-box on" id="checkBox">✓</div>
+          remember device
+        </div>
+        <span class="forgot-key">forgot key?</span>
+      </div>
+
+      <button class="login-btn" id="loginBtn" style="color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf);box-shadow:0 8px 24px -8px rgba(0,212,255,.55),pulse 2.4s ease-in-out infinite">
+        SIGN IN
+      </button>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;color:#3c4e5e">
+        <span>SESSION · TLS 1.3</span>
+        <a href="/store" class="store-link" id="storeLink">no license? get access →</a>
       </div>
     </div>
-    <div class="badge" id="statusBadge" style="color:#ffcf5c;border:1px solid rgba(255,207,92,.35);background:rgba(255,207,92,.1)">INITIALIZING</div>
-  </div>
 
-  <div class="segments" id="segments">
-    <div class="seg" data-idx="0"></div>
-    <div class="seg" data-idx="1"></div>
-    <div class="seg" data-idx="2"></div>
-    <div class="seg" data-idx="3"></div>
-  </div>
+    <!-- ──── LOADER VIEW ──── -->
+    <div id="loaderView" style="display:none">
 
-  <div>
-    <div class="prog-label"><span>PROGRESS</span><span class="prog-pct" id="progPct">0%</span></div>
-    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"><div class="prog-shimmer"></div></div></div>
-  </div>
+      <div class="status-row">
+        <div class="status-section">
+          <div class="status-label">STATUS</div>
+          <div class="status-indicator">
+            <div class="status-dot" id="loaderDot" style="background:#8b5cf6;box-shadow:0 0 10px #8b5cf6"></div>
+            <div class="status-phase" id="loaderPhase">INITIALIZING</div>
+          </div>
+        </div>
+        <div class="status-badge" id="loaderBadge" style="color:#8b5cf6;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);box-shadow:0 0 16px -6px #8b5cf6">CONNECTING</div>
+      </div>
 
-  <div class="console">
-    <div class="console-bar">
-      <div class="dot" style="background:#ff5f56"></div>
-      <div class="dot" style="background:#ffbd2e"></div>
-      <div class="dot" style="background:#27c93f"></div>
-      <span class="console-title">console — loader.log</span>
+      <div class="segments">
+        <div class="seg" id="seg0"></div>
+        <div class="seg" id="seg1"></div>
+        <div class="seg" id="seg2"></div>
+        <div class="seg" id="seg3"></div>
+      </div>
+
+      <div class="prog-section">
+        <div class="prog-header"><span>PROGRESS</span><span class="prog-pct"><span id="progNum">0</span>%</span></div>
+        <div class="prog-bar">
+          <div class="prog-fill" id="progFill"><div class="prog-shimmer"></div></div>
+        </div>
+      </div>
+
+      <div class="console">
+        <div class="console-bar">
+          <div class="console-dot" style="background:#ff5f56"></div>
+          <div class="console-dot" style="background:#ffbd2e"></div>
+          <div class="console-dot" style="background:#27c93f"></div>
+          <span class="console-title">console — loader.log</span>
+        </div>
+        <div class="console-log" id="consoleLog"></div>
+      </div>
+
+      <button class="launch-btn" id="launchBtn" disabled style="background:rgba(0,212,255,.15);color:#4f6478;border:1px solid rgba(0,212,255,.2)">INITIALIZING</button>
+
+      <div class="footer">
+        <span id="hwidText">HWID · A7F3-1C9E-44B0</span>
+        <span id="pingText">syncing…</span>
+      </div>
     </div>
-    <div class="log-area" id="logArea"></div>
-  </div>
-
-  <button class="launch-btn" id="launchBtn" disabled
-    style="color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf);border:none;box-shadow:0 8px 24px -8px rgba(0,212,255,.55)">
-    INITIALIZING
-  </button>
-
-  <div class="footer">
-    <span id="hwidDisplay">HWID · a4:f7:9c:2b:81</span>
-    <span id="pingDisplay">— ms</span>
-  </div>
-
-  <div class="status-bar" id="statusBar">
-    <span id="userDisplay">Guest</span>
-    <span id="sessionDisplay">Session: —</span>
   </div>
 </div>
 
 <script>
-// ── Loader State ──
-const LOG_DEFS = [
-  {tag:'[sys]', text:'Bootstrapping secure environment', type:'info', at:2},
-  {tag:'[net]', text:'Establishing encrypted tunnel → edge-07', type:'info', at:8},
-  {tag:'[auth]', text:'Reading hardware fingerprint', type:'info', at:16},
-  {tag:'[auth]', text:'Validating license key', type:'warn', at:26},
-  {tag:'[auth]', text:'License valid — tier: PREMIUM', type:'ok', at:38},
-  {tag:'[cdn]', text:'Fetching module manifest (rev 4471)', type:'info', at:47},
-  {tag:'[cdn]', text:'Downloading payload — 3.24 MB', type:'action', at:55},
-  {tag:'[core]', text:'Decrypting modules (AES-256)', type:'info', at:63},
-  {tag:'[core]', text:'Mapping target process pid:8124', type:'info', at:71},
-  {tag:'[core]', text:'Allocating memory region 0x7FF…', type:'info', at:78},
-  {tag:'[core]', text:'Resolving imports · bypassing checks', type:'warn', at:85},
-  {tag:'[inj]', text:'Injecting modules → hooks installed', type:'action', at:93},
-  {tag:'[inj]', text:'Integrity OK · all systems nominal', type:'ok', at:98},
-];
-const COLORS = {info:'#7f9bb0', warn:'#ffcf5c', ok:'#3ef0a3', action:'#00d4ff'};
-const DURATION = 6000;
+// ── State ──
+let state = { view: 'login', username: '', password: '', remember: true, error: '', loading: false, launched: false };
 
-let state = {progress:0, ready:false, launched:false, user:'Guest'};
-let logs = [], nextLog = 0, t0 = performance.now();
+// ── Login toggle ──
+document.getElementById('rememberBtn').onclick = () => {
+  state.remember = !state.remember;
+  document.getElementById('checkBox').className = 'check-box' + (state.remember ? ' on' : '');
+  document.getElementById('checkBox').textContent = state.remember ? '✓' : '';
+};
 
-function easeInOut(t) {
-  return t < 0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
-}
-
-function fmtTime(ms) { return '+' + (ms/1000).toFixed(2); }
-
-function addLog(tag, text, type, elapsed) {
-  const log = document.getElementById('logArea');
-  const div = document.createElement('div');
-  div.className = 'log-line';
-  div.innerHTML = '<span class="log-time">'+fmtTime(elapsed)+'</span><span class="log-tag">'+tag+'</span><span class="log-text" style="color:'+COLORS[type]+'">'+text+'</span>';
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-
-function updateUI(pct) {
-  const ready = pct >= 100;
-  state.progress = pct;
-  state.ready = ready;
-
-  // Progress
-  document.getElementById('progPct').textContent = pct + '%';
-  document.getElementById('progFill').style.width = easeInOut(pct/100)*100 + '%';
-
-  // Segments
-  const segs = Math.min(4, Math.floor(pct / 25) + (ready?0:0));
-  document.querySelectorAll('.seg').forEach((el,i) => {
-    el.classList.toggle('active', i < segs);
+// ── Native bridge ──
+if (window.chrome?.webview?.postMessage) {
+  document.addEventListener('DOMContentLoaded', () => {
+    window.chrome.webview.postMessage(JSON.stringify({ action: 'get_config' }));
   });
-
-  // Status
-  const dot = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-  const badge = document.getElementById('statusBadge');
-  const btn = document.getElementById('launchBtn');
-
-  if (ready) {
-    dot.style.background = '#3ef0a3';
-    dot.style.setProperty('--status-color','#3ef0a3');
-    text.textContent = 'ALL SYSTEMS NOMINAL';
-    badge.textContent = 'READY';
-    badge.style.color = '#3ef0a3';
-    badge.style.borderColor = 'rgba(62,240,163,.35)';
-    badge.style.background = 'rgba(62,240,163,.1)';
-    btn.disabled = false;
-    btn.textContent = 'LAUNCH';
-    btn.style.background = 'linear-gradient(180deg,#1ee0ff,#00a6cf)';
-    btn.style.color = '#03121a';
-  } else {
-    dot.style.background = '#ffcf5c';
-    dot.style.setProperty('--status-color','#ffcf5c');
-    text.textContent = 'INITIALIZING SECURE MODULES';
-    badge.textContent = 'INITIALIZING';
-    badge.style.color = '#ffcf5c';
-    badge.style.borderColor = 'rgba(255,207,92,.35)';
-    badge.style.background = 'rgba(255,207,92,.1)';
-  }
 }
 
-// ── Boot loop ──
-function tick() {
-  const elapsed = performance.now() - t0;
-  const t = Math.min(1, elapsed / DURATION);
-  const pct = Math.round(easeInOut(t) * 100);
-
-  // Push logs
-  while (nextLog < LOG_DEFS.length && pct >= LOG_DEFS[nextLog].at) {
-    const l = LOG_DEFS[nextLog++];
-    addLog(l.tag, l.text, l.type, elapsed);
-  }
-
-  updateUI(pct);
-
-  if (pct < 100) requestAnimationFrame(tick);
-  else {
-    // Final log cursor
-    const log = document.getElementById('logArea');
-    const cursor = document.createElement('div');
-    cursor.className = 'cursor-line';
-    cursor.innerHTML = '<span class="cursor-text">ready ></span><span class="cursor-blink"></span>';
-    log.appendChild(cursor);
-  }
-}
-
-// ── Launch button ──
-document.getElementById('launchBtn').addEventListener('click', () => {
-  if (state.launched || !state.ready) return;
-  state.launched = true;
-  const btn = document.getElementById('launchBtn');
-  btn.textContent = 'LAUNCHING...';
-  btn.disabled = true;
-  setTimeout(() => {
-    btn.textContent = '✓ INJECTED';
-    btn.style.background = 'rgba(62,240,163,.15)';
-    btn.style.color = '#3ef0a3';
-    btn.style.boxShadow = '0 0 24px -6px rgba(62,240,163,.6)';
-    btn.style.border = '1px solid rgba(62,240,163,.45)';
-  }, 1700);
-});
-
-// ── Native bridge handlers ──
 document.addEventListener('native-config', (e) => {
-  const cfg = e.detail;
-  document.getElementById('versionBadge').textContent = 'v' + cfg.version;
-  document.getElementById('appTitle').textContent = cfg.app_name || 'AETHER';
+  const c = e.detail;
+  document.getElementById('appTitle').textContent = c.app_name || 'Insolution';
+  if (c.version) {
+    document.getElementById('headerBadge').textContent = 'v' + c.version;
+    document.getElementById('headerBadge').style.cssText = 'padding:5px 10px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:1px;font-family:JetBrains Mono,monospace;color:#8b5cf6;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1)';
+  }
 });
+
+// ── Login flow ──
+const userInput = document.getElementById('userInput');
+const passInput = document.getElementById('passInput');
+const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+
+userInput.oninput = () => { state.username = userInput.value; loginError.style.display = 'none'; };
+passInput.oninput = () => { state.password = passInput.value; loginError.style.display = 'none'; };
+
+loginBtn.onclick = () => {
+  if (state.loading) return;
+  if (!state.username.trim() || !state.password.trim()) {
+    loginError.textContent = '⚠ fill in all fields';
+    loginError.style.display = 'block';
+    return;
+  }
+  state.loading = true;
+  loginBtn.textContent = '';
+  loginBtn.innerHTML = '<span class="spinner"></span> SIGNING IN';
+  loginBtn.disabled = true;
+
+  if (window.chrome?.webview?.postMessage) {
+    window.chrome.webview.postMessage(JSON.stringify({
+      action: 'login',
+      username: state.username.trim(),
+      password: state.password.trim()
+    }));
+  } else {
+    // Fallback: simulate login success
+    setTimeout(() => { showLoader(); }, 800);
+  }
+};
+
+passInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loginBtn.click(); });
 
 document.addEventListener('native-login_result', (e) => {
-  const r = e.detail;
-  if (r.success) {
-    state.user = r.username;
-    document.getElementById('userDisplay').textContent = r.username;
-    document.getElementById('statusBar').querySelector('span:last-child').textContent = 'Logged in';
+  state.loading = false;
+  loginBtn.disabled = false;
+  loginBtn.textContent = 'SIGN IN';
+  loginBtn.innerHTML = 'SIGN IN';
+
+  if (e.detail.success || e.detail.requires_2fa) {
+    showLoader();
+  } else {
+    loginError.textContent = '⚠ ' + (e.detail.error || 'Invalid credentials');
+    loginError.style.display = 'block';
   }
 });
 
-// ── Start boot on load ──
-window.addEventListener('DOMContentLoaded', () => {
-  t0 = performance.now();
+// ── Loader ──
+const LOGS = [
+  {tag:'[sys]',t:'Bootstrapping secure environment',c:'#7f9bb0',at:2},
+  {tag:'[net]',t:'Establishing encrypted tunnel → edge-07',c:'#7f9bb0',at:8},
+  {tag:'[auth]',t:'Reading hardware fingerprint',c:'#7f9bb0',at:16},
+  {tag:'[auth]',t:'Validating license key ····-····-9F2A',c:'#ffcf5c',at:26},
+  {tag:'[auth]',t:'License valid — tier: PREMIUM',c:'#3ef0a3',at:38},
+  {tag:'[cdn]',t:'Fetching module manifest (rev 4471)',c:'#7f9bb0',at:47},
+  {tag:'[cdn]',t:'Downloading payload — 3.24 MB',c:'#00d4ff',at:55},
+  {tag:'[core]',t:'Decrypting modules (AES-256)',c:'#7f9bb0',at:63},
+  {tag:'[core]',t:'Mapping target process pid:8124',c:'#7f9bb0',at:71},
+  {tag:'[core]',t:'Allocating memory region 0x7FF…',c:'#7f9bb0',at:78},
+  {tag:'[core]',t:'Resolving imports · bypassing checks',c:'#ffcf5c',at:85},
+  {tag:'[inj]',t:'Injecting modules → hooks installed',c:'#00d4ff',at:93},
+  {tag:'[inj]',t:'Integrity OK · all systems nominal',c:'#3ef0a3',at:98},
+];
+const PHASES = ['INITIALIZING','CHECKING LICENSE','INJECTING','READY'];
+const BADGES = [{t:'CONNECTING',c:'#8b5cf6'},{t:'AUTHORIZING',c:'#ffcf5c'},{t:'INJECTING',c:'#00d4ff'},{t:'UNDETECTED',c:'#3ef0a3'}];
+const DUR = 6000;
+let t0, nextLog=0, booting=false;
+
+function showLoader() {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('headerSub').textContent = 'SECURE MODULE LOADER';
+  document.getElementById('loaderView').style.display = 'block';
+  document.getElementById('storeLink').style.display = 'none';
+  document.getElementById('headerBadge').style.display = 'none';
+  // Show version badge
+  const v = document.createElement('div');
+  v.className = 'badge';
+  v.style.cssText = 'color:#8b5cf6;border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);box-shadow:0 0 14px -4px rgba(139,92,246,.6)';
+  v.textContent = document.getElementById('appTitle').textContent === 'Insolution' ? 'v1.0.0' : document.getElementById('appTitle').textContent;
+  document.querySelector('.header').appendChild(v);
+  startBoot();
+}
+
+function startBoot() {
+  t0 = performance.now(); nextLog = 0; booting = true;
+  tick();
+}
+
+function tick() {
+  const elapsed = performance.now() - t0;
+  const t = Math.min(1, elapsed / DUR);
+  const ease = t < 0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+  const pct = Math.round(ease*100);
+
+  while (nextLog < LOGS.length && pct >= LOGS[nextLog].at) {
+    const l = LOGS[nextLog++];
+    const log = document.getElementById('consoleLog');
+    const d = document.createElement('div');
+    d.className = 'log-line';
+    d.innerHTML = '<span class="log-time">+' + (elapsed/1000).toFixed(2) + '</span><span class="log-tagc">' + l.tag + '</span><span style="color:' + l.c + '">' + l.t + '</span>';
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // Progress
+  document.getElementById('progNum').textContent = pct;
+  document.getElementById('progFill').style.width = ease*100 + '%';
+
+  // Segments
+  const segs = Math.min(4, Math.floor(pct/25)+1);
+  for (let i = 0; i < 4; i++) document.getElementById('seg'+i).className = 'seg' + (i < segs ? ' on' : '');
+
+  // Status
+  const phaseIdx = Math.min(3, Math.floor(segs/1.34));
+  document.getElementById('loaderPhase').textContent = PHASES[phaseIdx] || 'READY';
+  document.getElementById('loaderBadge').textContent = BADGES[phaseIdx].t || 'UNDETECTED';
+  document.getElementById('loaderBadge').style.cssText = 'padding:6px 12px;border-radius:999px;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;white-space:nowrap;color:'+BADGES[phaseIdx].c+';border:1px solid rgba(139,92,246,.4);background:rgba(139,92,246,.1);box-shadow:0 0 16px -6px '+BADGES[phaseIdx].c;
+  const dot = document.getElementById('loaderDot');
+  dot.style.background = BADGES[phaseIdx].c;
+  dot.style.boxShadow = '0 0 10px ' + BADGES[phaseIdx].c;
+
+  if (pct >= 100) {
+    booting = false;
+    document.getElementById('loaderPhase').textContent = 'ALL SYSTEMS NOMINAL';
+    document.getElementById('launchBtn').disabled = false;
+    document.getElementById('launchBtn').style.cssText = 'margin-top:18px;width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;font-size:15px;font-weight:700;letter-spacing:3px;display:flex;align-items:center;justify-content:center;gap:10px;color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf);box-shadow:0 8px 24px -8px rgba(0,212,255,.55),pulse 2.4s ease-in-out infinite';
+    // Cursor
+    const log = document.getElementById('consoleLog');
+    const c = document.createElement('div');
+    c.className = 'log-line';
+    c.innerHTML = '<span style="color:#3a4d5e">ready ></span><span style="display:inline-block;width:7px;height:13px;background:#00d4ff;margin-left:2px;animation:blink 1s steps(1) infinite;box-shadow:0 0 6px #00d4ff;vertical-align:-2px"></span>';
+    log.appendChild(c);
+    // Ping
+    setInterval(() => {
+      document.getElementById('pingText').textContent = (8+Math.floor(Math.random()*15)) + ' ms';
+    }, 2000);
+    return;
+  }
   requestAnimationFrame(tick);
-  // Ping simulation
-  setInterval(() => {
-    document.getElementById('pingDisplay').textContent = (8+Math.floor(Math.random()*15)) + ' ms';
-  }, 2000);
-});
+}
+
+document.getElementById('launchBtn').onclick = () => {
+  if (state.launched) return;
+  state.launched = true;
+  const btn = document.getElementById('launchBtn');
+  btn.innerHTML = '<span class="spinner"></span> LAUNCHING';
+  btn.disabled = true;
+  btn.style.cssText = 'margin-top:18px;width:100%;padding:15px;border-radius:12px;border:none;font-size:15px;font-weight:700;letter-spacing:3px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:wait;color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf)';
+  setTimeout(() => {
+    btn.innerHTML = '✓ INJECTED';
+    btn.style.cssText = 'margin-top:18px;width:100%;padding:15px;border-radius:12px;border:none;font-size:15px;font-weight:700;letter-spacing:3px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:default;color:#3ef0a3;background:rgba(62,240,163,.15);border:1px solid rgba(62,240,163,.45);box-shadow:0 0 24px -6px rgba(62,240,163,.6)';
+    document.getElementById('pingText').textContent = '12 ms';
+  }, 1700);
+};
+
+// ── Crypto / Store links ──
+document.querySelector('.store-link').onclick = (e) => {
+  e.preventDefault();
+  if (window.chrome?.webview?.postMessage) {
+    window.chrome.webview.postMessage(JSON.stringify({ action: 'open_external', url: 'https://insolution.cloud/store' }));
+  }
+};
+document.querySelector('.forgot-key').onclick = () => {
+  if (window.chrome?.webview?.postMessage) {
+    window.chrome.webview.postMessage(JSON.stringify({ action: 'open_external', url: 'https://insolution.cloud/register' }));
+  }
+};
 </script>
 </body>
 </html>

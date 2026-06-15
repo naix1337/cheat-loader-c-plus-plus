@@ -1,4 +1,4 @@
-#include "ui/WebViewManager.h"
+﻿#include "ui/WebViewManager.h"
 
 #include <windows.h>
 #include <shellapi.h>
@@ -75,6 +75,9 @@ bool WebViewManager::initialize(HWND parent_window) {
                     GetClientRect(parent_window_, &bounds);
                     controller_->put_Bounds(bounds);
 
+                    // Fix zoom: lock at 100%
+                    controller_->put_ZoomFactor(1.0);
+
                     // Navigate to the loader page
                     navigateToLocal("loader");
                     return S_OK;
@@ -101,7 +104,7 @@ void WebViewManager::navigate(const std::wstring& url) {
 void WebViewManager::navigateToLocal(const std::string& page_name) {
     // SECURITY: Only allow whitelisted page names (no path traversal)
     if (!isSafePageName(page_name) || std::find(ALLOWED_PAGES.begin(), ALLOWED_PAGES.end(), page_name) == ALLOWED_PAGES.end()) {
-        // Invalid page name — navigate to loader as safe default
+        // Invalid page name â€” navigate to loader as safe default
         navigateToLocal("loader");
         return;
     }
@@ -119,7 +122,7 @@ void WebViewManager::navigateToLocal(const std::string& page_name) {
     if (startsWith(html_str, ui_str) && std::filesystem::exists(html_path)) {
         navigate(html_path.wstring());
     } else {
-        // Fallback only to known local page — never to remote URL
+        // Fallback only to known local page â€” never to remote URL
         navigateToLocal("loader");
     }
 }
@@ -221,7 +224,7 @@ HRESULT WebViewManager::onWebMessageReceived(ICoreWebView2*, ICoreWebView2WebMes
         } else if (action == "open_external") {
             std::string url = json.value("url", "");
             if (!url.empty()) {
-                // SECURITY: Only allow https:// URLs — block file://, javascript:, etc.
+                // SECURITY: Only allow https:// URLs â€” block file://, javascript:, etc.
                 std::wstring wurl(url.begin(), url.end());
                 if (startsWith(wurl, L"https://")) {
                     ShellExecuteW(nullptr, L"open", wurl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
@@ -268,3 +271,5 @@ HRESULT WebViewManager::configureWebViewSettings(ICoreWebView2* webview) {
 }
 
 } // namespace ui
+
+
