@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import path from "path";
 import * as forumService from "../services/forum.service";
 import { verifyAccessToken } from "../services/token.service";
 import { pool } from "../db/pool";
@@ -176,39 +177,15 @@ const router = Router();
 // ════════════════════════════════════════════════════════════
 
 /**
- * GET /forum — list all categories
+ * GET /forum — serve the new design forum page (static HTML with API calls)
  */
-router.get("/forum", hydrateCurrentUser, async (req: AuthRequest, res: Response) => {
+router.get("/forum", hydrateCurrentUser, async (_req: AuthRequest, res: Response) => {
   try {
-    const categories = await forumService.listCategories();
-
-    // Format dates for display
-    const formattedCategories = categories.map((cat) => {
-      const catObj: Record<string, unknown> = { ...cat };
-      if (cat.last_post) {
-        catObj.last_post = {
-          ...cat.last_post,
-          created_at_formatted: formatDate(cat.last_post.created_at),
-        };
-      }
-      return catObj;
-    });
-
-    renderWithLayout(res, "forum/categories", {
-      forumTitle: "Forum — insolution.cloud",
-      currentUser: req.currentUser,
-      activeNav: "forum",
-      categories: formattedCategories,
-    });
+    const publicDir = path.join(__dirname, "../public");
+    res.sendFile(path.join(publicDir, "forum.html"));
   } catch (err) {
-    console.error("Error loading categories:", err);
-    renderWithLayout(res, "forum/categories", {
-      forumTitle: "Forum — insolution.cloud",
-      currentUser: req.currentUser,
-      activeNav: "forum",
-      categories: [],
-      error: "Fehler beim Laden der Kategorien.",
-    });
+    console.error("Error serving forum page:", err);
+    res.status(500).send("Internal server error");
   }
 });
 
@@ -448,6 +425,19 @@ router.get(
 // ════════════════════════════════════════════════════════════
 //  API ROUTES (JSON)
 // ════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/forum/categories — list all categories with thread counts
+ */
+router.get("/api/forum/categories", async (_req: AuthRequest, res: Response) => {
+  try {
+    const categories = await forumService.listCategories();
+    res.json(categories);
+  } catch (err) {
+    console.error("Error listing categories:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 /**
  * POST /api/forum/threads — create a new thread
