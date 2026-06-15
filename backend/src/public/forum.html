@@ -495,7 +495,11 @@ function render() {
 }
 
 // ── Init ──────────────────────────────────────────────────
-fetchForum().catch(function(){document.getElementById('app').innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#ff5555;font-family:JetBrains Mono,monospace;font-size:13px;">⚠ Forum konnte nicht geladen werden</div>';});
+(async function(){
+  try{await fetchForum();}catch(e){
+    document.getElementById('app').innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:40px;color:#ff5555;font-family:JetBrains Mono,monospace;font-size:13px;text-align:center;line-height:1.8">⚠ '+esc(e.message||e)+'</div>';
+  }
+})();
 </script>
 </body>
 </html>
