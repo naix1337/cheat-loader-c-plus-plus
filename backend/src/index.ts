@@ -10,6 +10,8 @@ import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
 import registerRoutes from "./routes/register.routes";
 import forumRoutes from "./routes/forum.routes";
+import adminRoutes from './routes/admin.routes';
+import userContentRoutes from './routes/user-content.routes';
 
 const app = express();
 
@@ -42,6 +44,15 @@ app.use("/register", registerRoutes);
 
 // Forum — SSR pages and API endpoints
 app.use("/", forumRoutes);
+
+// Admin API — group management, permissions, reports, bans, warnings, mod log
+app.use("/api/admin", adminRoutes);
+
+// User-content API — notifications, conversations, bookmarks, profile
+app.use("/api/notifications", userContentRoutes);
+app.use("/api/conversations", userContentRoutes);
+app.use("/api/bookmarks", userContentRoutes);
+app.use("/api/user", userContentRoutes);  // for profile routes
 
 // 404 handler — skip for paths that might be static files
 app.use((req, res) => {

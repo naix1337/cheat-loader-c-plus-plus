@@ -2,6 +2,10 @@ import { Router, type Request, type Response } from "express";
 import * as forumService from "../services/forum.service";
 import { verifyAccessToken } from "../services/token.service";
 import { pool } from "../db/pool";
+import * as searchService from "../services/search.service";
+import * as reactionService from "../services/reaction.service";
+import * as watchService from "../services/watch.service";
+import * as bookmarkService from "../services/bookmark.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -650,5 +654,182 @@ router.post(
     }
   }
 );
+
+// ════════════════════════════════════════════════════════════
+//  NEW API ROUTES (reactions, bookmarks, watch, search, etc.)
+// ════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/forum/posts/:id/reaction — toggle a reaction on a post
+ */
+router.post("/api/forum/posts/:id/reaction", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const postId = req.params.id as string;
+    const { type } = req.body;
+
+    if (!type || !["like", "love", "haha", "wow", "sad", "angry"].includes(type)) {
+      res.status(400).json({ error: "Invalid reaction type" });
+      return;
+    }
+
+    const result = await reactionService.toggleReaction(postId, req.userId!, type);
+    res.json({ action: result.action, reaction: result.reaction });
+  } catch (err) {
+    console.error("Error toggling reaction:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/forum/posts/:id/reactions — get reaction breakdown for a post
+ */
+router.get("/api/forum/posts/:id/reactions", hydrateCurrentUser, async (req: AuthRequest, res: Response) => {
+  try {
+    const postId = req.params.id as string;
+    const reactions = await reactionService.getPostReactions(postId, req.currentUser?.id);
+    res.json(reactions);
+  } catch (err) {
+    console.error("Error getting reactions:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/forum/posts/:id/bookmark — toggle a bookmark on a post
+ */
+router.post("/api/forum/posts/:id/bookmark", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const postId = req.params.id as string;
+    const result = await bookmarkService.toggleBookmark(req.userId!, postId);
+    res.json({ bookmarked: result.bookmarked });
+  } catch (err) {
+    console.error("Error toggling bookmark:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/forum/threads/:id/watch — toggle watching a thread
+ */
+router.post("/api/forum/threads/:id/watch", requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const threadId = req.params.id as string;
+    const result = await watchService.toggleThreadWatch(req.userId!, threadId);
+    res.json({ watching: result.watching });
+  } catch (err) {
+    console.error("Error toggling thread watch:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * POST /api/forum/threads/:id/move — move a thread to a different category (admin only)
+ */
+router.post("/api/forum/threads/:id/move", requireAuth, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const threadId = req.params.id as string;
+    const { category_id } = req.body;
+
+    if (!category_id) {
+      res.status(400).json({ error: "category_id is required" });
+      return;
+    }
+
+    await pool.query(
+      `UPDATE forum_threads SET category_id = $1, updated_at = NOW() WHERE id = $2`,
+      [category_id, threadId]
+    );
+
+    res.json({ message: "Thread moved successfully" });
+  } catch (err) {
+    console.error("Error moving thread:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/forum/search — search threads and posts
+ */
+router.get("/api/forum/search", async (req: AuthRequest, res: Response) => {
+  try {
+    const q = req.query.q as string;
+    const type = (req.query.type as string) || "threads";
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+
+    if (!q || q.trim().length === 0) {
+      res.status(400).json({ error: "Search query is required" });
+      return;
+    }
+
+    const results = await searchService.search(q.trim(), type as "threads" | "posts", page);
+    res.json(results);
+  } catch (err) {
+    console.error("Error searching:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/forum/unread — list recent threads (simple unread implementation)
+ */
+router.get("/api/forum/unread", requireAuth, async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, title, slug, updated_at, created_at
+       FROM forum_threads
+       ORDER BY updated_at DESC
+       LIMIT 50`
+    );
+
+    res.json({ threads: result.rows });
+  } catch (err) {
+    console.error("Error fetching unread threads:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  NEW SSR ROUTES
+// ════════════════════════════════════════════════════════════
+
+/**
+ * GET /forum/search — search page (SSR)
+ */
+router.get("/forum/search", hydrateCurrentUser, async (req: AuthRequest, res: Response) => {
+  try {
+    const q = req.query.q as string;
+
+    if (!q || q.trim().length === 0) {
+      renderWithLayout(res, "forum/search", {
+        forumTitle: "Suche — Forum — insolution.cloud",
+        currentUser: req.currentUser,
+        activeNav: "forum",
+        results: null,
+        query: "",
+      });
+      return;
+    }
+
+    const results = await searchService.search(q.trim(), "threads", 1);
+
+    renderWithLayout(res, "forum/search", {
+      forumTitle: `Suche: ${q} — Forum — insolution.cloud`,
+      currentUser: req.currentUser,
+      activeNav: "forum",
+      results,
+      query: q,
+    });
+  } catch (err) {
+    console.error("Error searching:", err);
+    renderWithLayout(res, "forum/search", {
+      forumTitle: "Suche — Forum — insolution.cloud",
+      currentUser: req.currentUser,
+      activeNav: "forum",
+      results: null,
+      query: (req.query.q as string) || "",
+      error: "Fehler bei der Suche.",
+    });
+  }
+});
 
 export default router;
