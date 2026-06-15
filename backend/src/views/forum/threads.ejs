@@ -1,0 +1,90 @@
+<div class="breadcrumb">
+  <a href="/forum">Forum</a>
+  <span class="sep">/</span>
+  <span class="current"><%= category.name %></span>
+</div>
+
+<div class="page-header">
+  <h1><%= category.name %></h1>
+  <% if (category.description) { %><p><%= category.description %></p><% } %>
+</div>
+
+<div class="action-bar">
+  <div class="left">
+    <span style="font-size:13px;color:#888;"><%= pagination.total %> Themen</span>
+  </div>
+  <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+    <a href="/forum/c/<%= category.slug %>/new" class="btn btn-sm">+ Neues Thema</a>
+  <% } %>
+</div>
+
+<% if (threads.length === 0) { %>
+  <div class="card" style="padding:40px;text-align:center;">
+    <p style="color:#888;font-size:15px;">In dieser Kategorie gibt es noch keine Themen.</p>
+    <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+      <a href="/forum/c/<%= category.slug %>/new" class="btn" style="margin-top:16px;">Erstes Thema erstellen</a>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="card">
+    <!-- Header row -->
+    <div style="display:flex;padding:12px 20px;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #1e1e2a;">
+      <div style="flex:1;">Thema</div>
+      <div style="width:80px;text-align:center;">Antworten</div>
+      <div style="width:60px;text-align:center;">Aufrufe</div>
+      <div style="width:160px;text-align:right;">Letzter Beitrag</div>
+    </div>
+
+    <ul class="row-list">
+      <% threads.forEach(function(thread) { %>
+        <li class="row-item <%= thread.pinned ? 'pinned' : '' %>">
+          <div class="row-main">
+            <div class="row-title">
+              <a href="/forum/t/<%= thread.slug %>"><%= thread.title %></a>
+              <% if (thread.pinned) { %><span class="badge badge-pin">Angepinnt</span><% } %>
+              <% if (thread.locked) { %><span class="badge badge-lock">Geschlossen</span><% } %>
+            </div>
+            <div class="row-meta">
+              <span>von <%= thread.author_username %></span>
+              <span><%= thread.created_at_formatted %></span>
+            </div>
+          </div>
+          <div class="row-stats">
+            <span class="num"><%= thread.post_count %></span>
+            <span class="label">Antworten</span>
+          </div>
+          <div class="row-stats">
+            <span class="num"><%= thread.views %></span>
+            <span class="label">Aufrufe</span>
+          </div>
+          <div class="row-last">
+            <% if (thread.last_post) { %>
+              <div class="author"><%= thread.last_post.author_username %></div>
+              <div class="date"><%= thread.last_post.created_at_formatted %></div>
+            <% } else { %>
+              <div style="color:#555;">—</div>
+            <% } %>
+          </div>
+        </li>
+      <% }); %>
+    </ul>
+  </div>
+
+  <% if (pagination.totalPages > 1) { %>
+    <div class="pagination">
+      <% if (pagination.page > 1) { %>
+        <a href="/forum/c/<%= category.slug %>?page=<%= pagination.page - 1 %>">&laquo; Zurueck</a>
+      <% } else { %>
+        <span class="disabled">&laquo; Zurueck</span>
+      <% } %>
+
+      <span class="info">Seite <%= pagination.page %> von <%= pagination.totalPages %></span>
+
+      <% if (pagination.page < pagination.totalPages) { %>
+        <a href="/forum/c/<%= category.slug %>?page=<%= pagination.page + 1 %>">Weiter &raquo;</a>
+      <% } else { %>
+        <span class="disabled">Weiter &raquo;</span>
+      <% } %>
+    </div>
+  <% } %>
+<% } %>

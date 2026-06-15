@@ -1,0 +1,26 @@
+<div class="page-header">
+  <h1>Forum</h1>
+  <p>Willkommen im Forum. Durchstoeffern Sie die Kategorien und beteiligen Sie sich an Diskussionen.</p>
+</div>
+
+<div class="card">
+  <ul class="row-list">
+    <% categories.forEach(function(cat) { %>
+      <a href="/forum/c/<%= cat.slug %>" class="cat-card">
+        <div class="cat-name"><%= cat.name %></div>
+        <div class="cat-desc"><%= cat.description || 'Keine Beschreibung' %></div>
+        <div class="cat-stats">
+          <span><span class="num"><%= cat.thread_count %></span> Themen</span>
+        </div>
+        <% if (cat.last_post) { %>
+          <div class="cat-last">
+            Letzter Beitrag: <a href="/forum/t/<%= cat.last_post.thread_slug %>"><%= cat.last_post.thread_title %></a>
+            von <%= cat.last_post.author_username %>, <%= cat.last_post.created_at_formatted %>
+          </div>
+        <% } else { %>
+          <div class="cat-last" style="color:#555;">Noch keine Beitraege</div>
+        <% } %>
+      </a>
+    <% }); %>
+  </ul>
+</div>

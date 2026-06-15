@@ -1,0 +1,80 @@
+<div class="breadcrumb">
+  <a href="/forum">Forum</a>
+  <span class="sep">/</span>
+  <a href="/forum/c/<%= thread.category_slug %>"><%= thread.category_name %></a>
+  <span class="sep">/</span>
+  <a href="/forum/t/<%= thread.slug %>"><%= thread.title %></a>
+  <span class="sep">/</span>
+  <span class="current">Beitrag bearbeiten</span>
+</div>
+
+<div class="page-header">
+  <h1>Beitrag bearbeiten</h1>
+  <p>Aendern Sie den Inhalt Ihres Beitrags in &laquo;<%= thread.title %>&raquo;.</p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="alert alert-error"><%= error %></div>
+<% } %>
+
+<div class="card" style="padding:28px;">
+  <form method="POST" action="/api/forum/posts/<%= post.id %>" onsubmit="return handleEditPost(event)">
+    <input type="hidden" name="_method" value="PUT" />
+    <input type="hidden" name="_token" value="<%= token %>" />
+
+    <div class="form-group">
+      <label for="content">Beitrag</label>
+      <textarea id="content" name="content" class="form-control"
+                required minlength="1"><%= post.content %></textarea>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;">
+      <button type="submit" class="btn">Aenderungen speichern</button>
+      <a href="/forum/t/<%= thread.slug %>" class="btn btn-outline">Abbrechen</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  async function handleEditPost(event) {
+    event.preventDefault();
+    const form = event.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const content = document.getElementById('content').value.trim();
+
+    if (!content) {
+      alert('Der Beitrag darf nicht leer sein.');
+      return false;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Speichere...';
+
+    try {
+      const res = await fetch('/api/forum/posts/<%= post.id %>', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer <%= token %>'
+        },
+        body: JSON.stringify({
+          content: content
+        })
+      });
+
+      if (res.ok) {
+        window.location.href = '/forum/t/<%= thread.slug %>';
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Fehler beim Speichern');
+        btn.disabled = false;
+        btn.textContent = 'Aenderungen speichern';
+      }
+    } catch (err) {
+      alert('Netzwerkfehler. Bitte versuchen Sie es erneut.');
+      btn.disabled = false;
+      btn.textContent = 'Aenderungen speichern';
+    }
+    return false;
+  }
+</script>

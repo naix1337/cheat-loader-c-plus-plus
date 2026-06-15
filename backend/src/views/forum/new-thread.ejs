@@ -1,0 +1,93 @@
+<div class="breadcrumb">
+  <a href="/forum">Forum</a>
+  <span class="sep">/</span>
+  <a href="/forum/c/<%= category.slug %>"><%= category.name %></a>
+  <span class="sep">/</span>
+  <span class="current">Neues Thema</span>
+</div>
+
+<div class="page-header">
+  <h1>Neues Thema in &laquo;<%= category.name %>&raquo;</h1>
+  <p>Erstellen Sie ein neues Thema zur Diskussion.</p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="alert alert-error"><%= error %></div>
+<% } %>
+
+<div class="card" style="padding:28px;">
+  <form method="POST" action="/api/forum/threads" onsubmit="return handleNewThread(event)">
+    <input type="hidden" name="_token" value="<%= token %>" />
+
+    <div class="form-group">
+      <label for="title">Titel</label>
+      <input type="text" id="title" name="title" class="form-control"
+             placeholder="Aussagekraeftiger Titel fuer Ihr Thema"
+             required minlength="3" maxlength="200" />
+    </div>
+
+    <div class="form-group">
+      <label for="content">Beitrag</label>
+      <textarea id="content" name="content" class="form-control"
+                placeholder="Schreiben Sie Ihren Beitrag hier..."
+                required minlength="1"></textarea>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center;">
+      <button type="submit" class="btn">Thema erstellen</button>
+      <a href="/forum/c/<%= category.slug %>" class="btn btn-outline">Abbrechen</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  async function handleNewThread(event) {
+    event.preventDefault();
+    const form = event.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const title = document.getElementById('title').value.trim();
+    const content = document.getElementById('content').value.trim();
+
+    if (!title || title.length < 3) {
+      alert('Der Titel muss mindestens 3 Zeichen lang sein.');
+      return false;
+    }
+    if (!content) {
+      alert('Bitte geben Sie einen Beitrag ein.');
+      return false;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Erstelle...';
+
+    try {
+      const res = await fetch('/api/forum/threads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer <%= token %>'
+        },
+        body: JSON.stringify({
+          categorySlug: '<%= category.slug %>',
+          title: title,
+          content: content
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        window.location.href = '/forum/t/' + data.slug;
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Fehler beim Erstellen des Themas');
+        btn.disabled = false;
+        btn.textContent = 'Thema erstellen';
+      }
+    } catch (err) {
+      alert('Netzwerkfehler. Bitte versuchen Sie es erneut.');
+      btn.disabled = false;
+      btn.textContent = 'Thema erstellen';
+    }
+    return false;
+  }
+</script>

@@ -1,0 +1,148 @@
+<div class="breadcrumb">
+  <a href="/forum">Forum</a>
+  <span class="sep">/</span>
+  <a href="/forum/c/<%= thread.category_slug %>"><%= thread.category_name %></a>
+  <span class="sep">/</span>
+  <span class="current"><%= thread.title %></span>
+</div>
+
+<div class="page-header" style="margin-bottom:16px;">
+  <h1>
+    <%= thread.title %>
+    <% if (thread.pinned) { %><span class="badge badge-pin">Angepinnt</span><% } %>
+    <% if (thread.locked) { %><span class="badge badge-lock">Geschlossen</span><% } %>
+  </h1>
+  <p style="font-size:13px;color:#888;margin-top:4px;">
+    Gestartet von <%= thread.author_username %>, <%= thread.created_at_formatted %>
+    &middot; <%= pagination.total %> Beitraege &middot; <%= thread.views %> Aufrufe
+  </p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="alert alert-error"><%= error %></div>
+<% } %>
+
+<% if (typeof success !== 'undefined' && success) { %>
+  <div class="alert alert-info"><%= success %></div>
+<% } %>
+
+<% if (thread.locked) { %>
+  <div class="card locked-banner" style="margin-bottom:20px;">
+    <span class="icon">&#x1F512;</span>
+    Dieses Thema wurde geschlossen. Neue Beitraege sind nicht mehr moeglich.
+  </div>
+<% } %>
+
+<% if (posts.length > 0) { %>
+  <div class="card">
+    <% posts.forEach(function(post) { %>
+      <div class="post">
+        <div class="post-sidebar">
+          <div class="post-avatar"><%= post.author_username.charAt(0).toUpperCase() %></div>
+          <div class="post-author"><%= post.author_username %></div>
+          <div class="post-date"><%= post.created_at_formatted %></div>
+        </div>
+        <div class="post-content">
+          <%- post.content_html %>
+
+          <% if (post.updated_at_formatted) { %>
+            <div style="margin-top:8px;font-size:11px;color:#555;font-style:italic;">
+              Zuletzt bearbeitet: <%= post.updated_at_formatted %>
+            </div>
+          <% } %>
+
+          <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.id === post.author_id) { %>
+            <div class="post-actions">
+              <a href="/forum/posts/<%= post.id %>/edit">Bearbeiten</a>
+              <a href="#" class="delete-link" data-post-id="<%= post.id %>" onclick="if(confirm('Diesen Beitrag wirklich loeschen?')){fetch('/api/forum/posts/<%= post.id %>',{method:'DELETE',headers:{'Authorization':'Bearer <%= token %>'}}).then(r=>{if(r.ok)location.reload();else r.json().then(d=>alert(d.error||'Fehler'))});}return false;">Loeschen</a>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+
+  <% if (pagination.totalPages > 1) { %>
+    <div class="pagination">
+      <% if (pagination.page > 1) { %>
+        <a href="/forum/t/<%= thread.slug %>?page=<%= pagination.page - 1 %>">&laquo; Zurueck</a>
+      <% } else { %>
+        <span class="disabled">&laquo; Zurueck</span>
+      <% } %>
+
+      <span class="info">Seite <%= pagination.page %> von <%= pagination.totalPages %></span>
+
+      <% if (pagination.page < pagination.totalPages) { %>
+        <a href="/forum/t/<%= thread.slug %>?page=<%= pagination.page + 1 %>">Weiter &raquo;</a>
+      <% } else { %>
+        <span class="disabled">Weiter &raquo;</span>
+      <% } %>
+    </div>
+  <% } %>
+<% } else { %>
+  <div class="card" style="padding:40px;text-align:center;">
+    <p style="color:#888;">Keine Beitraege in diesem Thema.</p>
+  </div>
+<% } %>
+
+<% if (!thread.locked && typeof currentUser !== 'undefined' && currentUser) { %>
+  <div class="card" style="margin-top:24px;padding:24px;">
+    <h3 style="font-size:16px;font-weight:600;color:#e0e0e0;margin-bottom:16px;">Antwort verfassen</h3>
+    <form method="POST" action="/api/forum/posts" onsubmit="return handleReplySubmit(event)">
+      <input type="hidden" name="threadSlug" value="<%= thread.slug %>" />
+      <input type="hidden" name="_token" value="<%= token %>" />
+      <div class="form-group">
+        <textarea class="form-control" name="content" placeholder="Ihre Antwort eingeben..." required minlength="1"></textarea>
+      </div>
+      <button type="submit" class="btn">Antwort senden</button>
+    </form>
+  </div>
+
+  <script>
+    async function handleReplySubmit(event) {
+      event.preventDefault();
+      const form = event.target;
+      const btn = form.querySelector('button[type="submit"]');
+      const textarea = form.querySelector('textarea');
+      const content = textarea.value.trim();
+      if (!content) return false;
+
+      btn.disabled = true;
+      btn.textContent = 'Sende...';
+
+      try {
+        const res = await fetch('/api/forum/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer <%= token %>'
+          },
+          body: JSON.stringify({
+            threadSlug: '<%= thread.slug %>',
+            content: content
+          })
+        });
+
+        if (res.ok) {
+          window.location.reload();
+        } else {
+          const data = await res.json();
+          alert(data.error || 'Fehler beim Senden der Antwort');
+          btn.disabled = false;
+          btn.textContent = 'Antwort senden';
+        }
+      } catch (err) {
+        alert('Netzwerkfehler. Bitte versuchen Sie es erneut.');
+        btn.disabled = false;
+        btn.textContent = 'Antwort senden';
+      }
+      return false;
+    }
+  </script>
+<% } else if (!thread.locked && (!currentUser)) { %>
+  <div class="card" style="margin-top:24px;padding:24px;text-align:center;">
+    <p style="color:#888;font-size:14px;">
+      <a href="/login" style="color:#00d4ff;">Melden Sie sich an</a>, um auf dieses Thema zu antworten.
+    </p>
+  </div>
+<% } %>
