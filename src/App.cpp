@@ -1,4 +1,4 @@
-#include "App.h"
+﻿#include "App.h"
 
 #include "auth/TokenStore.h"
 #include "core/Config.h"
@@ -58,7 +58,7 @@ bool App::initialize() {
         [this](std::function<void()> task) { enqueueMainThread(std::move(task)); });
 
     if (!ui_manager_->initialize(hwnd_)) {
-        core::Logger::instance().warn("WebView2 not available — user must install WebView2 Runtime");
+        core::Logger::instance().warn("WebView2 not available â€” user must install WebView2 Runtime");
         MessageBoxW(hwnd_, L"WebView2 Runtime is required.\nDownload from: https://go.microsoft.com/fwlink/p/?LinkId=2124703",
                     L"WebView2 Required", MB_OK | MB_ICONWARNING);
         return false;
@@ -83,7 +83,7 @@ bool App::createWindow() {
     RegisterClassExW(&wc);
 
     RECT rect{0, 0, kWindowWidth, kWindowHeight};
-    AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+    // Borderless popup — no title bar buttons
 
     int w = rect.right - rect.left;
     int h = rect.bottom - rect.top;
@@ -93,7 +93,7 @@ bool App::createWindow() {
     int y = (sh - h) / 2;
 
     hwnd_ = CreateWindowExW(0, class_name, window_title_.c_str(),
-        WS_OVERLAPPEDWINDOW, x, y, w, h, nullptr, nullptr, instance_, this);
+        WS_POPUP, x, y, w, h, nullptr, nullptr, instance_, this);
 
     if (!hwnd_) return false;
 

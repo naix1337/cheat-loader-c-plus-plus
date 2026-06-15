@@ -120,7 +120,9 @@ void WebViewManager::navigateToLocal(const std::string& page_name) {
     auto ui_str = ui_dir.wstring();
 
     if (startsWith(html_str, ui_str) && std::filesystem::exists(html_path)) {
-        navigate(html_path.wstring());
+        std::wstring file_url = L"file:///" + html_str;
+        for (auto& c : file_url) { if (c == L'\\') c = L'/'; }
+        navigate(file_url);
     } else {
         // Fallback only to known local page â€” never to remote URL
         navigateToLocal("loader");
@@ -271,5 +273,6 @@ HRESULT WebViewManager::configureWebViewSettings(ICoreWebView2* webview) {
 }
 
 } // namespace ui
+
 
 
