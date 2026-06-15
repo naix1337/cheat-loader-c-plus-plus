@@ -24,7 +24,6 @@ interface AuthRequest extends Request {
 // ── Constants ──────────────────────────────────────────────
 
 const THREADS_PER_PAGE = 20;
-const POSTS_PER_PAGE = 10;
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -52,21 +51,6 @@ function formatDate(isoStr: string | null | undefined): string {
     month: "2-digit",
     year: "numeric",
   })}, ${timeStr}`;
-}
-
-/**
- * Convert plain text to HTML with paragraph breaks.
- */
-function textToHtml(text: string): string {
-  const escaped = text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-  return escaped
-    .split(/\n\s*\n/)
-    .map((p) => `<p>${p.replace(/\n/g, "<br />")}</p>`)
-    .join("");
 }
 
 /**
@@ -283,68 +267,12 @@ router.get(
 /**
  * GET /forum/t/:slug — view a thread with posts
  */
-router.get("/forum/t/:slug", hydrateCurrentUser, async (req: AuthRequest, res: Response) => {
+router.get("/forum/t/:slug", hydrateCurrentUser, async (_req: AuthRequest, res: Response) => {
   try {
-    const slug = req.params.slug as string;
-    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
-
-    // Increment view counter
-    forumService.incrementViews(slug).catch(() => {});
-
-    const thread = await forumService.getThreadBySlug(slug);
-    if (!thread) {
-      res.status(404).send("Thread not found");
-      return;
-    }
-
-    const postsResult = await forumService.getPostsByThread(slug, page, POSTS_PER_PAGE);
-
-    // Get the token for the reply/delete forms
-    const token = extractToken(req) || "";
-
-    // Format dates and content
-    const formattedPosts = postsResult.posts.map((post) => {
-      const p: Record<string, unknown> = { ...post };
-      p.created_at_formatted = formatDate(post.created_at);
-      p.updated_at_formatted = post.updated_at && post.updated_at !== post.created_at
-        ? formatDate(post.updated_at)
-        : null;
-      p.content_html = textToHtml(post.content);
-      return p;
-    });
-
-    // Calculate reply count (total posts minus first = replies)
-    const replyCount = postsResult.total - 1;
-
-    renderWithLayout(res, "forum/thread", {
-      forumTitle: `${thread.title} — Forum — insolution.cloud`,
-      currentUser: req.currentUser,
-      activeNav: "forum",
-      thread: {
-        id: thread.id,
-        title: thread.title,
-        slug: thread.slug,
-        category_name: thread.category_name,
-        category_slug: thread.category_slug,
-        author_username: thread.author_username,
-        author_id: thread.author_id,
-        pinned: thread.pinned,
-        locked: thread.locked,
-        views: thread.views,
-        replyCount: Math.max(0, replyCount),
-        created_at_formatted: formatDate(thread.created_at),
-      },
-      posts: formattedPosts,
-      pagination: {
-        page: postsResult.page,
-        limit: POSTS_PER_PAGE,
-        total: postsResult.total,
-        totalPages: postsResult.totalPages,
-      },
-      token,
-    });
+    const publicDir = path.join(__dirname, "../public");
+    res.sendFile(path.join(publicDir, "thread.html"));
   } catch (err) {
-    console.error("Error loading thread:", err);
+    console.error("Error serving thread page:", err);
     res.status(500).send("Internal server error");
   }
 });

@@ -30,6 +30,10 @@
   </div>
 </div>
 <script>
+// ── HTML escaper (prevents XSS) ──────────────────────────
+function esc(s) { const d = document.createElement('div'); d.textContent = '' + s; return d.innerHTML; }
+function escAttr(s) { return ('' + s).replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
 // ── Token helper ─────────────────────────────────────────
 function getToken() {
   const m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
@@ -274,15 +278,15 @@ function render() {
       <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${t.pinned ? '#00d4ff' : 'transparent'};"></div>
       <div style="width:42px;height:42px;flex:none;border-radius:11px;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#03121a;box-shadow:0 4px 12px -4px rgba(0,0,0,0.6);">${initial}</div>
       <div style="flex:1 1 240px;min-width:0;">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tagHtml}<span style="font-size:15px;font-weight:600;color:#e8f4ff;">${t.title}</span></div>
-        <div style="margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#54697b;">by <span style="color:${rankColor};">${t.author_username}</span> · ${timeAgo(t.created_at)}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tagHtml}<span style="font-size:15px;font-weight:600;color:#e8f4ff;">${esc(t.title)}</span></div>
+        <div style="margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#54697b;">by <span style="color:${rankColor};">${esc(t.author_username)}</span> · ${timeAgo(t.created_at)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:18px;flex:none;">
         <div style="text-align:center;min-width:46px;"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#9fc6dc;">${fmtCount(t.post_count || 0)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:1px;color:#44586a;">REPLIES</div></div>
         <div style="text-align:center;min-width:46px;"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#9fc6dc;">${fmtCount(t.views || 0)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:1px;color:#44586a;">VIEWS</div></div>
         <div style="display:flex;align-items:center;gap:8px;min-width:130px;">
           <div style="width:26px;height:26px;flex:none;border-radius:7px;background:${lastBg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#03121a;">${lastInitial}</div>
-          <div style="line-height:1.2;min-width:0;"><div style="font-size:11.5px;color:#b8cad8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.last_post?.author_username || '—'}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#44586a;">${t.last_post ? timeAgo(t.last_post.created_at) : '—'}</div></div>
+          <div style="line-height:1.2;min-width:0;"><div style="font-size:11.5px;color:#b8cad8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.last_post?.author_username || '—')}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#44586a;">${t.last_post ? timeAgo(t.last_post.created_at) : '—'}</div></div>
         </div>
         <button onclick="event.stopPropagation();toggleBookmark('${t.id}')" style="background:transparent;border:none;cursor:pointer;font-size:16px;line-height:1;color:${isBookmarked ? '#00d4ff' : '#33424f'};padding:4px;">${isBookmarked ? '★' : '☆'}</button>
       </div>

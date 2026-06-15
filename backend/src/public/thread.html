@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thread — insolution.cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; font-family: 'Space Grotesk', system-ui, sans-serif; color: #c7d6e2; }
+  @keyframes ct-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes ct-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.25; } }
+  @keyframes ct-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes ct-spin { to { transform: rotate(360deg); } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  a { color: inherit; text-decoration: none; }
+  input, textarea, button { font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;gap:12px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#4f6478;">
+    <span style="width:16px;height:16px;border:2px solid rgba(0,212,255,0.2);border-top-color:#00d4ff;border-radius:50%;display:inline-block;animation:ct-spin 0.6s linear infinite;"></span>
+    LOADING THREAD…
+  </div>
+</div>
+<script>
+(function() {
+  'use strict';
+
+  // escaper
+  function esc(s) { var d = document.createElement('div'); d.textContent = '' + s; return d.innerHTML; }
+  function escAttr(s) { return ('' + s).replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  // token
+  function getToken() {
+    var m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function apiHeaders() {
+    var h = { 'Content-Type': 'application/json' };
+    var t = getToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+
+  function fmtCount(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '' + n; }
+
+  // slug from URL
+  var slug = '';
+  var mm = window.location.pathname.match(/\/forum\/t\/([^/]+)/);
+  if (mm) slug = mm[1];
+
+  // palette & rank styles
+  var PALETTE = {
+    cyan:   'linear-gradient(145deg,#1ee0ff,#0a7fa6)',
+    purple: 'linear-gradient(145deg,#b39dff,#6d4fd6)',
+    green:  'linear-gradient(145deg,#3ef0a3,#1f9e72)',
+    gold:   'linear-gradient(145deg,#ffcf5c,#d49a17)',
+    red:    'linear-gradient(145deg,#ff8b8b,#c74f4f)',
+    blue:   'linear-gradient(145deg,#7fd0ff,#3a86c7)',
+  };
+  var RANK_STYLE = {
+    STAFF:   { color: '#b39dff', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.4)' },
+    PREMIUM: { color: '#00d4ff', bg: 'rgba(0,212,255,0.1)',   border: 'rgba(0,212,255,0.35)' },
+    MEMBER:  { color: '#7f9bb0', bg: 'rgba(127,155,176,0.1)', border: 'rgba(127,155,176,0.3)' },
+    OWNER:   { color: '#ffcf5c', bg: 'rgba(255,207,92,0.1)',  border: 'rgba(255,207,92,0.4)' },
+  };
+  var TAG_STYLE = {
+    PINNED:  { color: '#00d4ff', bg: 'rgba(0,212,255,0.1)',  border: 'rgba(0,212,255,0.35)' },
+    UPDATE:  { color: '#b39dff', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.4)' },
+    HOT:     { color: '#ff8b6b', bg: 'rgba(255,139,107,0.12)', border: 'rgba(255,139,107,0.4)' },
+    HELPFUL: { color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.4)' },
+    SOLUTION:{ color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.4)' },
+  };
+
+  // mock data
+  var THREAD_META = {
+    category: 'releases',
+    tags: ['PINNED', 'UPDATE', 'HOT'],
+    title: 'v2.4.1 changelog — smoothing rework &amp; undetected status',
+    author: 'kernel_d',
+    authorRank: 'STAFF',
+    authorCreated: '2019',
+    time: '6h ago',
+    views: 42100,
+    replyCount: 5,
+    postCount: '2,940',
+  };
+  var OP_BODY_HTML =
+    '<p style="margin:0 0 14px;">Rolled out <strong style="color:#eaf7ff;">v2.4.1</strong> across all regions. The big one this cycle is the smoothing pipeline — it now interpolates per-frame instead of per-tick, so tracking reads way more human on replays. Full notes below.</p>' +
+    '<div style="margin:0 0 16px;padding:12px 14px;border-radius:11px;background:rgba(62,240,163,0.07);border:1px solid rgba(62,240,163,0.3);display:flex;align-items:center;gap:11px;">' +
+      '<span style="width:9px;height:9px;border-radius:50%;background:#3ef0a3;box-shadow:0 0 10px #3ef0a3;animation:ct-blink 2s infinite;flex:none;"></span>' +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#8df0c4;"><strong style="color:#3ef0a3;">STATUS: UNDETECTED</strong> · last checked 2h ago · edge-07</span>' +
+    '</div>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1px;color:#4f6478;margin-bottom:9px;">CHANGES</div>' +
+    '<ul style="margin:0 0 16px;padding-left:4px;list-style:none;">' +
+      '<li style="display:flex;gap:10px;margin-bottom:8px;"><span style="color:#00d4ff;">+</span><span>Reworked aim smoothing — per-frame interpolation, new <code style="font-family:\'JetBrains Mono\',monospace;font-size:12.5px;color:#9fe6ff;background:rgba(0,212,255,0.08);padding:1px 6px;border-radius:5px;">smoothing</code> curve options</span></li>' +
+      '<li style="display:flex;gap:10px;margin-bottom:8px;"><span style="color:#00d4ff;">+</span><span>Per-bone ESP toggles added to the visuals module</span></li>' +
+      '<li style="display:flex;gap:10px;margin-bottom:8px;"><span style="color:#ffcf5c;">~</span><span>Lowered injection footprint by ~18% — faster <code style="font-family:\'JetBrains Mono\',monospace;font-size:12.5px;color:#9fe6ff;background:rgba(0,212,255,0.08);padding:1px 6px;border-radius:5px;">INJECTING</code> phase</span></li>' +
+      '<li style="display:flex;gap:10px;margin-bottom:0;"><span style="color:#ff8b6b;">−</span><span>Removed the legacy triggerbot (replaced by the new reaction engine)</span></li>' +
+    '</ul>' +
+    '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1px;color:#4f6478;margin-bottom:9px;">RECOMMENDED CONFIG</div>' +
+    '<pre style="margin:0 0 16px;padding:14px 16px;border-radius:11px;background:rgba(2,6,10,0.85);border:1px solid rgba(0,212,255,0.16);overflow-x:auto;font-family:\'JetBrains Mono\',monospace;font-size:12.5px;line-height:1.7;color:#9fc6dc;"><span style="color:#b39dff;">[aim]</span>\n' +
+    'smoothing   = <span style="color:#3ef0a3;">1.85</span>\n' +
+    'fov         = <span style="color:#3ef0a3;">4.5</span>\n' +
+    'target_bone = <span style="color:#ffcf5c;">"neck"</span>\n' +
+    '<span style="color:#b39dff;">[visuals]</span>\n' +
+    'esp         = <span style="color:#3ef0a3;">true</span>\n' +
+    'box_style   = <span style="color:#ffcf5c;">"corner"</span></pre>' +
+    '<p style="margin:0;color:#8aa0b2;font-size:13.5px;">Update is mandatory — older builds will fail the license check. Drop questions below and I\'ll keep this thread updated with the live status.</p>';
+  var BASE_REPLIES = [
+    { id: 1, author: 'gh0st', rank: 'PREMIUM', av: 'red', time: '5h ago', likes: 42,
+      body: 'Smoothing finally feels natural — replays look completely legit now. Any ETA on a config import button so we can share presets?' },
+    { id: 2, author: 'mara.exe', rank: 'PREMIUM', av: 'green', time: '4h ago', likes: 88, badge: 'HELPFUL',
+      quoteAuthor: 'kernel_d', quote: 'Full notes below… the big one this cycle is the smoothing pipeline.',
+      body: 'Confirmed clean after a 3h session on my main account. Zero flags, no review queue. The lower injection footprint is noticeable too — loader hits READY way faster.' },
+    { id: 3, author: 'newguy22', rank: 'MEMBER', av: 'blue', time: '2h ago', likes: 3,
+      body: 'Updated and now my loader hangs forever at CHECKING LICENSE. Anyone else? It worked fine on 2.4.0.' },
+    { id: 4, author: 'kernel_d', rank: 'STAFF', av: 'purple', time: '1h ago', likes: 64, badge: 'SOLUTION',
+      quoteAuthor: 'newguy22', quote: 'now my loader hangs forever at CHECKING LICENSE',
+      body: 'Known on first launch after the update. Clear %localappdata%\\aether\\cache and relaunch as admin — it re-pulls the new manifest. Fixed it for everyone who\'s reported back. Marking this as the solution.' },
+    { id: 5, author: 'syn', rank: 'MEMBER', av: 'gold', time: '38m ago', likes: 12,
+      body: 'running great here, 0 issues. per-bone ESP toggles are a huge upgrade.' },
+  ];
+
+  // state
+  function getCurrentUser() {
+    var token = getToken();
+    if (!token) return null;
+    try {
+      var parts = token.split('.');
+      var payload = JSON.parse(atob(parts[1]));
+      return { id: payload.sub, username: payload.username || 'n0vakill', rank: 'PREMIUM' };
+    } catch(e) { return null; }
+  }
+  var state = {
+    currentUser: getCurrentUser(),
+    sort: 'oldest',
+    likes: {},
+    extraReplies: [],
+    draft: '',
+    opLiked: false,
+    opBookmarked: true,
+  };
+  var uidCounter = 500;
+
+  function getAllReplies() { return BASE_REPLIES.concat(state.extraReplies); }
+  function getSortedReplies() {
+    var all = getAllReplies();
+    var sorted = all.slice();
+    if (state.sort === 'top') {
+      sorted.sort(function(a, b) {
+        var aL = a.likes + (state.likes['r' + a.id] ? 1 : 0);
+        var bL = b.likes + (state.likes['r' + b.id] ? 1 : 0);
+        return bL - aL;
+      });
+    }
+    return sorted;
+  }
+
+  // render
+  function render() {
+    var user = state.currentUser;
+    var userName = user ? user.username : 'Guest';
+    var userInitial = userName[0].toUpperCase();
+    var userRank = user ? user.rank : 'GUEST';
+    var sorted = getSortedReplies();
+    var totalReplies = getAllReplies().length;
+    var opLiked = state.opLiked;
+    var opLikeCount = 318 + (opLiked ? 1 : 0);
+
+    // tags
+    var tagsHtml = '';
+    for (var ti = 0; ti < THREAD_META.tags.length; ti++) {
+      var tag = THREAD_META.tags[ti];
+      var ts = TAG_STYLE[tag] || TAG_STYLE.PINNED;
+      tagsHtml += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:5px;color:' + ts.color + ';background:' + ts.bg + ';border:1px solid ' + ts.border + ';">' + tag + '</span>';
+    }
+
+    // replies html
+    var repliesHtml = '';
+    for (var i = 0; i < sorted.length; i++) {
+      var r = sorted[i];
+      var rk = RANK_STYLE[r.rank] || RANK_STYLE.MEMBER;
+      var rLiked = !!state.likes['r' + r.id];
+      var likeCount = r.likes + (rLiked ? 1 : 0);
+      var bgPalette = PALETTE[r.av] || PALETTE.blue;
+      var isStaff = r.rank === 'STAFF';
+
+      var badgeHtml = '';
+      if (r.badge) {
+        var bs = TAG_STYLE[r.badge] || TAG_STYLE.HELPFUL;
+        badgeHtml = '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8.5px;font-weight:700;letter-spacing:1px;color:' + bs.color + ';padding:2px 7px;border:1px solid ' + bs.border + ';border-radius:999px;background:' + bs.bg + ';">' + r.badge + '</span>';
+      }
+
+      var quoteHtml = '';
+      if (r.quote) {
+        quoteHtml =
+          '<div style="margin:0 0 11px;padding:9px 13px;border-left:3px solid rgba(0,212,255,0.5);border-radius:0 9px 9px 0;background:rgba(0,212,255,0.05);">' +
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#00d4ff;margin-bottom:4px;">' + esc(r.quoteAuthor) + ' wrote:</div>' +
+            '<div style="font-size:12.5px;color:#7f97a8;font-style:italic;">' + esc(r.quote) + '</div>' +
+          '</div>';
+      }
+
+      var cardBg = isStaff
+        ? 'linear-gradient(180deg,rgba(139,92,246,0.08),rgba(12,16,22,0.85))'
+        : 'linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.8))';
+      var cardBorder = isStaff
+        ? 'rgba(139,92,246,0.4)'
+        : 'rgba(0,212,255,0.14)';
+      var anim = r.fresh ? 'ct-rise 0.3s ease both' : 'none';
+
+      repliesHtml +=
+        '<div class="reply-card" data-reply-id="' + r.id + '" style="border-radius:14px;overflow:hidden;background:' + cardBg + ';border:1px solid ' + cardBorder + ';box-shadow:0 14px 40px -28px rgba(0,0,0,0.9);animation:' + anim + ';">' +
+          '<div style="display:flex;align-items:center;gap:11px;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.05);">' +
+            '<div style="width:38px;height:38px;flex:none;border-radius:10px;background:' + bgPalette + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#03121a;">' + esc(r.author[0].toUpperCase()) + '</div>' +
+            '<div style="min-width:0;flex:1;">' +
+              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+                '<span style="font-size:14px;font-weight:700;color:#eaf7ff;">' + esc(r.author) + '</span>' +
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8.5px;font-weight:700;letter-spacing:1px;color:' + rk.color + ';padding:2px 7px;border:1px solid ' + rk.border + ';border-radius:999px;background:' + rk.bg + ';">' + r.rank + '</span>' +
+                badgeHtml +
+              '</div>' +
+            '</div>' +
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#44586a;text-align:right;white-space:nowrap;">#' + (i + 2) + ' · ' + esc(r.time) + '</div>' +
+          '</div>' +
+          '<div style="padding:15px 18px;font-size:14px;line-height:1.66;color:#bccdda;">' +
+            quoteHtml +
+            '<div class="r-body" style="white-space:pre-wrap;"></div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid rgba(255,255,255,0.04);background:rgba(2,6,10,0.25);">' +
+            '<button class="btn-like-reply" data-reply-id="' + r.id + '" style="display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:600;color:' + (rLiked ? '#03121a' : '#9fc6dc') + ';background:' + (rLiked ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)') + ';border:1px solid ' + (rLiked ? 'transparent' : 'rgba(0,212,255,0.16)') + ';">▲ <span class="like-count">' + likeCount + '</span></button>' +
+            '<button class="btn-quote-reply" data-reply-author="' + escAttr(r.author) + '" data-reply-snippet="' + escAttr(r.body.length > 70 ? r.body.slice(0, 70) + '…' : r.body) + '" style="padding:6px 11px;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:600;color:#8fb0c6;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">❝ Quote</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    var userRankStyle = RANK_STYLE[userRank] || RANK_STYLE.MEMBER;
+    var userPalette = PALETTE.cyan;
+    var draftTrimmed = state.draft.trim();
+    var canReply = draftTrimmed.length > 0;
+
+    // build page HTML
+    var app = document.getElementById('app');
+    app.innerHTML =
+      '<div style="position:relative;min-height:100vh;font-family:\'Space Grotesk\',system-ui,sans-serif;background:radial-gradient(130% 80% at 50% -10%,#0d1622 0%,#0a0a0f 46%,#060709 100%);color:#c7d6e2;">' +
+        '<div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);pointer-events:none;"></div>' +
+        '<div style="position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.18) 3px);background-size:100% 6px;animation:ct-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.5;"></div>' +
+        '<div style="position:fixed;top:-160px;left:50%;width:720px;height:360px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,0.13),transparent 70%);filter:blur(30px);pointer-events:none;"></div>' +
+        '<div style="position:relative;z-index:1;max-width:860px;margin:0 auto;padding:20px 22px 64px;">' +
+
+        // TOP BAR
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px;margin-bottom:18px;">' +
+          '<a href="/forum" style="display:flex;align-items:center;gap:9px;text-decoration:none;padding:9px 14px;border-radius:10px;background:rgba(16,22,30,0.7);border:1px solid rgba(0,212,255,0.18);color:#9fc6dc;font-size:13px;font-weight:600;" onmouseenter="this.style.borderColor=\'rgba(0,212,255,0.45)\';this.style.color=\'#cdeefb\'" onmouseleave="this.style.borderColor=\'rgba(0,212,255,0.18)\';this.style.color=\'#9fc6dc\'">' +
+            '<span style="color:#00d4ff;font-size:15px;">‹</span> Discussion Board' +
+          '</a>' +
+          '<div style="display:flex;align-items:center;gap:9px;margin-left:auto;">' +
+            '<a href="/" style="display:flex;align-items:center;gap:9px;text-decoration:none;">' +
+              '<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:8px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 14px -2px rgba(0,212,255,0.5);">' +
+                '<div style="width:11px;height:11px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 9px #00d4ff;"></div>' +
+              '</div>' +
+              '<div style="font-size:15px;font-weight:700;letter-spacing:2.5px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,0.5);">AETHER</div>' +
+            '</a>' +
+          '</div>' +
+        '</div>' +
+
+        // THREAD HEADER
+        '<div style="margin-bottom:16px;">' +
+          '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;margin-bottom:9px;">/ board / ' + esc(THREAD_META.category) + '</div>' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;">' + tagsHtml + '</div>' +
+          '<h1 style="margin:0;font-size:27px;line-height:1.2;font-weight:700;letter-spacing:0.3px;color:#eaf7ff;text-shadow:0 0 18px rgba(0,212,255,0.3);text-wrap:balance;">' + THREAD_META.title + '</h1>' +
+          '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#54697b;">' +
+            '<span>started by <span style="color:#b39dff;">' + esc(THREAD_META.author) + '</span></span>' +
+            '<span>· ' + esc(THREAD_META.time) + '</span>' +
+            '<span>· ' + fmtCount(THREAD_META.views) + ' views</span>' +
+            '<span>· ' + totalReplies + ' replies</span>' +
+          '</div>' +
+        '</div>' +
+
+        // OP POST
+        '<div style="border-radius:16px;overflow:hidden;background:linear-gradient(180deg,rgba(0,212,255,0.06),rgba(12,16,22,0.85));border:1px solid rgba(0,212,255,0.3);box-shadow:0 0 50px -18px rgba(0,212,255,0.5);margin-bottom:22px;">' +
+          '<div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(0,212,255,0.12);">' +
+            '<div style="width:44px;height:44px;flex:none;border-radius:12px;background:linear-gradient(145deg,#b39dff,#6d4fd6);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:#0c0a18;box-shadow:0 0 16px -4px rgba(139,92,246,0.7);">' + esc(THREAD_META.author[0].toUpperCase()) + '</div>' +
+            '<div style="min-width:0;flex:1;">' +
+              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+                '<span style="font-size:15px;font-weight:700;color:#eaf7ff;">' + esc(THREAD_META.author) + '</span>' +
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;letter-spacing:1px;color:#b39dff;padding:2px 8px;border:1px solid rgba(139,92,246,0.4);border-radius:999px;background:rgba(139,92,246,0.1);">' + THREAD_META.authorRank + '</span>' +
+              '</div>' +
+              '<div style="margin-top:4px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#54697b;">' + THREAD_META.postCount + ' posts · joined ' + THREAD_META.authorCreated + ' · author</div>' +
+            '</div>' +
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#44586a;text-align:right;">#1 · ' + esc(THREAD_META.time) + '</div>' +
+          '</div>' +
+          '<div class="op-body" style="padding:20px 22px;font-size:14.5px;line-height:1.72;color:#c2d2df;">' + OP_BODY_HTML + '</div>' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid rgba(0,212,255,0.1);background:rgba(2,6,10,0.3);">' +
+            '<button id="btn-like-op" style="display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:9px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:600;color:' + (opLiked ? '#03121a' : '#9fc6dc') + ';background:' + (opLiked ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)') + ';border:1px solid ' + (opLiked ? 'transparent' : 'rgba(0,212,255,0.16)') + ';">▲ ' + opLikeCount + '</button>' +
+            '<button id="btn-quote-op" style="padding:7px 13px;border-radius:9px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:600;color:#8fb0c6;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">❝ Quote</button>' +
+            '<button id="btn-share-op" style="padding:7px 13px;border-radius:9px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:600;color:#8fb0c6;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">↗ Share</button>' +
+            '<button id="btn-bookmark-op" style="margin-left:auto;padding:7px 11px;border-radius:9px;cursor:pointer;font-size:14px;line-height:1;color:' + (state.opBookmarked ? '#ffcf5c' : '#3c4e5e') + ';background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">' + (state.opBookmarked ? '★' : '☆') + '</button>' +
+          '</div>' +
+        '</div>' +
+
+        // REPLIES HEADER
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
+          '<div id="reply-count" style="font-family:\'JetBrains Mono\',monospace;font-size:11px;letter-spacing:1.5px;color:#4f6478;">' + totalReplies + ' REPLIES</div>' +
+          '<button id="btn-sort" style="background:transparent;border:none;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#00d4ff;">SORT · ' + (state.sort === 'oldest' ? 'OLDEST' : 'TOP') + '</button>' +
+        '</div>' +
+
+        // REPLIES LIST
+        '<div id="replies-list" style="display:flex;flex-direction:column;gap:14px;">' + repliesHtml + '</div>' +
+
+        // REPLY COMPOSER
+        '<div id="composer" style="margin-top:22px;border-radius:16px;background:linear-gradient(180deg,rgba(18,24,33,0.85),rgba(10,13,18,0.9));border:1px solid rgba(0,212,255,0.28);box-shadow:0 0 44px -16px rgba(0,212,255,0.45);overflow:hidden;">' +
+          '<div style="display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid rgba(0,212,255,0.12);">' +
+            '<div style="position:relative;width:36px;height:36px;flex:none;border-radius:10px;background:' + userPalette + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#03121a;">' + userInitial +
+              '<span style="position:absolute;right:-2px;bottom:-2px;width:9px;height:9px;border-radius:50%;background:#3ef0a3;border:2px solid #0c1017;"></span>' +
+            '</div>' +
+            '<div style="line-height:1.2;">' +
+              '<div style="font-size:13px;font-weight:700;color:#eaf7ff;">' + esc(userName) + '</div>' +
+              '<div style="font-family:\'JetBrains Mono\',monospace;font-size:9px;letter-spacing:1px;color:' + userRankStyle.color + ';">reply as ' + userRank + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="padding:14px 18px;">' +
+            '<textarea id="composer-textarea" placeholder="Add to the discussion… markdown &amp; quotes supported" style="width:100%;min-height:96px;resize:vertical;padding:12px 14px;border-radius:11px;background:rgba(2,6,10,0.6);border:1px solid rgba(0,212,255,0.18);outline:none;color:#d6e6f2;font-family:\'JetBrains Mono\',monospace;font-size:13px;line-height:1.6;">' + esc(state.draft) + '</textarea>' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap;">' +
+              '<div style="display:flex;gap:6px;">' +
+                '<button class="btn-toolbar" data-tag="B" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">B</button>' +
+                '<button class="btn-toolbar" data-tag="I" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">I</button>' +
+                '<button class="btn-toolbar" data-tag="/" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">/</button>' +
+                '<button class="btn-toolbar" data-tag="@" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">@</button>' +
+                '<button class="btn-toolbar" data-tag="#" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:#7f9bb0;background:rgba(2,6,10,0.5);border:1px solid rgba(0,212,255,0.14);">#</button>' +
+              '</div>' +
+              '<button id="btn-post-reply" style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:11px 22px;border-radius:10px;border:none;white-space:nowrap;cursor:' + (canReply ? 'pointer' : 'not-allowed') + ';font-family:\'Space Grotesk\',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;color:' + (canReply ? '#03121a' : '#3c4e5e') + ';background:' + (canReply ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)') + ';box-shadow:' + (canReply ? '0 8px 24px -8px rgba(0,212,255,0.55)' : 'none') + ';">POST REPLY</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+    // set reply body text via textContent (XSS safe)
+    var replyCards = app.querySelectorAll('.reply-card');
+    for (var j = 0; j < replyCards.length; j++) {
+      var card = replyCards[j];
+      var bodyEl = card.querySelector('.r-body');
+      var replyId = parseInt(card.getAttribute('data-reply-id'), 10);
+      for (var k = 0; k < sorted.length; k++) {
+        if (sorted[k].id === replyId) {
+          if (bodyEl) bodyEl.textContent = sorted[k].body;
+          break;
+        }
+      }
+    }
+
+    // bind events
+    bindEvents();
+  }
+
+  // event binding
+  function bindEvents() {
+    var app = document.getElementById('app');
+    if (!app) return;
+
+    var btnLikeOp = document.getElementById('btn-like-op');
+    if (btnLikeOp) btnLikeOp.onclick = function() { state.opLiked = !state.opLiked; render(); };
+
+    var btnQuoteOp = document.getElementById('btn-quote-op');
+    if (btnQuoteOp) btnQuoteOp.onclick = function() { quoteInto('kernel_d', '"v2.4.1 changelog — smoothing rework"'); };
+
+    var btnShareOp = document.getElementById('btn-share-op');
+    if (btnShareOp) {
+      btnShareOp.onclick = function() {
+        if (navigator.share) {
+          navigator.share({ title: THREAD_META.title, url: window.location.href });
+        } else {
+          var dummy = document.createElement('input');
+          dummy.value = window.location.href;
+          document.body.appendChild(dummy);
+          dummy.select();
+          document.execCommand('copy');
+          document.body.removeChild(dummy);
+          btnShareOp.style.color = '#3ef0a3';
+          btnShareOp.textContent = '✓ Copied';
+          setTimeout(function() { render(); }, 2000);
+        }
+      };
+    }
+
+    var btnBookmarkOp = document.getElementById('btn-bookmark-op');
+    if (btnBookmarkOp) btnBookmarkOp.onclick = function() { state.opBookmarked = !state.opBookmarked; render(); };
+
+    var btnSort = document.getElementById('btn-sort');
+    if (btnSort) btnSort.onclick = function() { state.sort = state.sort === 'oldest' ? 'top' : 'oldest'; render(); };
+
+    // reply interactions via event delegation
+    var replyList = document.getElementById('replies-list');
+    if (replyList) {
+      replyList.onclick = function(e) {
+        var target = e.target;
+        while (target && target !== replyList) {
+          if (target.classList.contains('btn-like-reply')) {
+            var rid = parseInt(target.getAttribute('data-reply-id'), 10);
+            state.likes['r' + rid] = !state.likes['r' + rid];
+            render();
+            return;
+          }
+          if (target.classList.contains('btn-quote-reply')) {
+            var au = target.getAttribute('data-reply-author');
+            var sn = target.getAttribute('data-reply-snippet');
+            quoteInto(au, sn);
+            return;
+          }
+          target = target.parentNode;
+        }
+      };
+    }
+
+    // composer
+    var textarea = document.getElementById('composer-textarea');
+    if (textarea) {
+      textarea.oninput = function(e) { state.draft = e.target.value; updatePostButton(); };
+    }
+
+    // toolbar buttons
+    var toolbarBtns = app.querySelectorAll('.btn-toolbar');
+    for (var i = 0; i < toolbarBtns.length; i++) {
+      (function(btn) {
+        btn.onclick = function() {
+          var tag = btn.getAttribute('data-tag');
+          var ta = document.getElementById('composer-textarea');
+          if (!ta) return;
+          var start = ta.selectionStart;
+          var end = ta.selectionEnd;
+          var text = ta.value;
+          var before = text.substring(0, start);
+          var selected = text.substring(start, end);
+          var after = text.substring(end);
+          var wrap;
+          switch (tag) {
+            case 'B': wrap = ['**', '**']; break;
+            case 'I': wrap = ['_', '_']; break;
+            case '/': wrap = ['//', '']; break;
+            case '@': wrap = ['@', ' ']; break;
+            case '#': wrap = ['#', '']; break;
+            default: wrap = [tag, ''];
+          }
+          var insertion = wrap[0] + (selected || '') + wrap[1];
+          ta.value = before + insertion + after;
+          state.draft = ta.value;
+          ta.focus();
+          var newPos = start + insertion.length;
+          ta.selectionStart = newPos;
+          ta.selectionEnd = newPos;
+          updatePostButton();
+        };
+      })(toolbarBtns[i]);
+    }
+
+    var btnPost = document.getElementById('btn-post-reply');
+    if (btnPost) btnPost.onclick = function() { postReply(); };
+
+    // Ctrl+Enter to post
+    if (textarea) {
+      textarea.onkeydown = function(e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); postReply(); }
+      };
+    }
+  }
+
+  // actions
+  function quoteInto(author, snippet) {
+    var block = '> ' + author + ' wrote: ' + snippet + '\n\n';
+    state.draft = (state.draft ? state.draft + '\n' : '') + block;
+    render();
+    var ta = document.getElementById('composer-textarea');
+    if (ta) {
+      ta.focus();
+      var len = ta.value.length;
+      ta.selectionStart = len;
+      ta.selectionEnd = len;
+    }
+    var composer = document.getElementById('composer');
+    if (composer) composer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function postReply() {
+    var txt = state.draft.trim();
+    if (!txt) return;
+    uidCounter++;
+    var newReply = {
+      id: uidCounter,
+      author: state.currentUser ? state.currentUser.username : 'n0vakill',
+      rank: state.currentUser ? state.currentUser.rank : 'PREMIUM',
+      av: 'cyan',
+      time: 'just now',
+      likes: 0,
+      body: txt,
+      fresh: true,
+    };
+    state.extraReplies.push(newReply);
+    state.draft = '';
+    render();
+    var replyList = document.getElementById('replies-list');
+    if (replyList && replyList.lastElementChild) {
+      replyList.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function updatePostButton() {
+    var btn = document.getElementById('btn-post-reply');
+    if (!btn) return;
+    var can = state.draft.trim().length > 0;
+    btn.style.cursor = can ? 'pointer' : 'not-allowed';
+    btn.style.color = can ? '#03121a' : '#3c4e5e';
+    btn.style.background = can ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)';
+    btn.style.boxShadow = can ? '0 8px 24px -8px rgba(0,212,255,0.55)' : 'none';
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

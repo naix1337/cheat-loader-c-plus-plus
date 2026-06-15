@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheat Loader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{font-family:'Space Grotesk',system-ui,sans-serif;background:#06070b}
+
+@keyframes cl-scan{from{background-position:0 0}to{background-position:0 6px}}
+@keyframes cl-scanband{from{transform:translateY(-100%)}to{transform:translateY(560px)}}
+@keyframes cl-shimmer{0%{transform:translateX(-160%) skewX(-18deg)}100%{transform:translateX(360%) skewX(-18deg)}}
+@keyframes cl-pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0.55),0 10px 30px -8px rgba(0,212,255,0.45)}50%{box-shadow:0 0 26px 2px rgba(0,212,255,0.65),0 10px 38px -6px rgba(0,212,255,0.6)}}
+@keyframes cl-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes cl-flicker{0%,100%{opacity:1}92%{opacity:1}94%{opacity:0.55}96%{opacity:1}}
+@keyframes cl-spin{to{transform:rotate(360deg)}}
+@keyframes cl-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.loader-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(120% 90% at 50% -10%,#0d1622 0%,#0a0a0f 48%,#060709 100%);overflow:hidden}
+.loader-grid{position:absolute;inset:-2px;background-image:linear-gradient(rgba(0,212,255,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.045) 1px,transparent 1px);background-size:42px 42px;-webkit-mask-image:radial-gradient(80% 70% at 50% 40%,#000 30%,transparent 100%);mask-image:radial-gradient(80% 70% at 50% 40%,#000 30%,transparent 100%);pointer-events:none}
+.loader-scanlines{position:absolute;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.22) 3px);background-size:100% 6px;animation:cl-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.6}
+.loader-glow-top{position:absolute;top:-120px;left:50%;width:520px;height:320px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,0.18),transparent 70%);filter:blur(20px);pointer-events:none}
+.loader-glow-bot{position:absolute;bottom:-140px;left:30%;width:460px;height:300px;background:radial-gradient(circle,rgba(139,92,246,0.14),transparent 70%);filter:blur(24px);pointer-events:none}
+
+.loader-card{position:relative;width:min(480px,100%);border-radius:18px;padding:26px 26px 24px;background:linear-gradient(180deg,rgba(18,24,33,0.82),rgba(10,13,18,0.86));backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(0,212,255,0.28);box-shadow:0 0 0 1px rgba(0,212,255,0.06),0 0 60px -12px rgba(0,212,255,0.35),0 30px 80px -30px rgba(0,0,0,0.9),inset 0 1px 0 rgba(255,255,255,0.05);overflow:hidden}
+.loader-scanband{position:absolute;left:0;right:0;top:0;height:60px;background:linear-gradient(180deg,rgba(0,212,255,0.10),transparent);animation:cl-scanband 4.5s linear infinite;pointer-events:none}
+
+.loader-hdr{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.loader-hdr-l{display:flex;align-items:center;gap:12px}
+.loader-logo{position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:10px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 18px -2px rgba(0,212,255,0.5),inset 0 0 12px rgba(0,212,255,0.18);animation:cl-flicker 5s infinite}
+.loader-logo-d{width:13px;height:13px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 12px #00d4ff}
+.loader-tt{line-height:1}
+.loader-tt-t{font-size:18px;font-weight:700;letter-spacing:3px;color:#eaf7ff;text-shadow:0 0 14px rgba(0,212,255,0.6)}
+.loader-tt-s{margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#5d7488}
+.loader-ver{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;color:#8b5cf6;padding:5px 10px;border:1px solid rgba(139,92,246,0.4);border-radius:999px;background:rgba(139,92,246,0.1);box-shadow:0 0 14px -4px rgba(139,92,246,0.6);white-space:nowrap}
+
+.loader-hr{height:1px;margin:20px 0 18px;background:linear-gradient(90deg,transparent,rgba(0,212,255,0.35),transparent)}
+
+.loader-sr{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.loader-sr-l{min-width:0}
+.loader-sr-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#4f6478;margin-bottom:6px}
+.loader-sr-i{display:flex;align-items:center;gap:9px}
+.loader-sr-dot{width:7px;height:7px;border-radius:50%;flex:none;transition:background .3s ease,box-shadow .3s ease}
+.loader-sr-ph{font-size:17px;font-weight:600;letter-spacing:1px;color:#e8f4ff;white-space:nowrap}
+.loader-sr-badge{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;padding:6px 12px;border-radius:999px;white-space:nowrap;transition:color .3s ease,border-color .3s ease,background .3s ease,box-shadow .3s ease}
+
+.loader-segs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:18px}
+.loader-seg{height:4px;border-radius:3px;transition:background .4s ease,box-shadow .4s ease}
+
+.loader-pw{margin-bottom:18px}
+.loader-ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.loader-pl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#4f6478}
+.loader-pp{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#00d4ff;text-shadow:0 0 10px rgba(0,212,255,0.6)}
+.loader-pt{position:relative;height:9px;border-radius:6px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.16);overflow:hidden}
+.loader-pf{position:absolute;inset:0 auto 0 0;width:0%;background:linear-gradient(90deg,#0094c7,#00d4ff);box-shadow:0 0 14px rgba(0,212,255,0.7);border-radius:6px;transition:width .18s linear}
+.loader-ps{position:absolute;top:0;bottom:0;left:0;width:40px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.85),transparent);animation:cl-shimmer 1.6s linear infinite}
+
+.loader-con{position:relative;height:176px;border-radius:11px;border:1px solid rgba(0,212,255,0.16);background:linear-gradient(180deg,rgba(2,5,9,0.92),rgba(4,8,12,0.92));box-shadow:inset 0 0 24px rgba(0,0,0,0.6)}
+.loader-con-tb{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid rgba(0,212,255,0.12)}
+.loader-con-dot{width:8px;height:8px;border-radius:50%}
+.loader-con-tt{margin-left:6px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#43586b}
+.loader-con-log{height:134px;overflow-y:auto;padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.62;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent}
+.loader-con-log::-webkit-scrollbar{width:4px}
+.loader-con-log::-webkit-scrollbar-track{background:transparent}
+.loader-con-log::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.3);border-radius:3px}
+
+.log-line{display:flex;gap:9px;animation:cl-rise .3s ease both}
+.log-tm{color:#3a4d5e;flex:none}
+.log-tag{color:#44586a}
+.log-txt{flex:1;word-break:break-word}
+.cursor-line{display:flex;gap:9px}
+.cursor-tm{color:#3a4d5e}
+.cursor-pr{color:#00d4ff}
+.cursor-blk{display:inline-block;width:7px;height:13px;vertical-align:-2px;background:#00d4ff;margin-left:2px;animation:cl-blink 1s steps(1) infinite;box-shadow:0 0 6px #00d4ff}
+
+.loader-btn{margin-top:18px;width:100%;padding:15px;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:3px;cursor:not-allowed;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .12s ease,filter .2s ease,background .3s ease,border .3s ease,box-shadow .3s ease;border:none;outline:none;user-select:none}
+.loader-btn:disabled{background:#0e1620;color:#39495a;border:1px solid rgba(255,255,255,0.06);box-shadow:none;cursor:not-allowed}
+.loader-btn.ready{background:linear-gradient(180deg,#1ee0ff,#00a6cf);color:#03121a;border:none;box-shadow:0 10px 30px -8px rgba(0,212,255,0.5);cursor:pointer;animation:cl-pulse 1.8s ease-in-out infinite}
+.loader-btn.ready:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.loader-btn.ready:active{transform:translateY(1px) scale(0.99)}
+.loader-btn.launching{background:linear-gradient(180deg,#00c3ec,#0099c2);color:#03121a;border:none;box-shadow:0 10px 30px -8px rgba(0,212,255,0.5);cursor:wait;animation:none}
+.loader-btn.done{background:rgba(62,240,163,0.12);color:#3ef0a3;border:1px solid rgba(62,240,163,0.5);box-shadow:0 0 24px -6px rgba(62,240,163,0.6);cursor:default;animation:none}
+.loader-btn.done:hover{filter:none;transform:none}
+.loader-btn-spinner{width:14px;height:14px;border:2px solid rgba(3,18,26,0.35);border-top-color:#03121a;border-radius:50%;display:inline-block;animation:cl-spin .6s linear infinite}
+
+.loader-ft{display:flex;justify-content:space-between;margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:#3c4e5e}
+</style>
+</head>
+<body>
+
+<div class="loader-bg">
+  <div class="loader-grid"></div>
+  <div class="loader-scanlines"></div>
+  <div class="loader-glow-top"></div>
+  <div class="loader-glow-bot"></div>
+
+  <div class="loader-card">
+    <div class="loader-scanband"></div>
+
+    <!-- HEADER -->
+    <div class="loader-hdr">
+      <div class="loader-hdr-l">
+        <div class="loader-logo"><div class="loader-logo-d"></div></div>
+        <div class="loader-tt">
+          <div class="loader-tt-t" id="tTitle">AETHER</div>
+          <div class="loader-tt-s">SECURE&nbsp;MODULE&nbsp;LOADER</div>
+        </div>
+      </div>
+      <div class="loader-ver" id="tVersion">v2.4.1 Dev Build</div>
+    </div>
+
+    <div class="loader-hr"></div>
+
+    <!-- STATUS -->
+    <div class="loader-sr">
+      <div class="loader-sr-l">
+        <div class="loader-sr-lbl">STATUS</div>
+        <div class="loader-sr-i">
+          <div class="loader-sr-dot" id="tDot"></div>
+          <div class="loader-sr-ph" id="tPhase">INITIALIZING</div>
+        </div>
+      </div>
+      <div class="loader-sr-badge" id="tBadge">CONNECTING</div>
+    </div>
+
+    <!-- SEGMENTS -->
+    <div class="loader-segs" id="tSegs">
+      <div class="loader-seg" id="s0"></div>
+      <div class="loader-seg" id="s1"></div>
+      <div class="loader-seg" id="s2"></div>
+      <div class="loader-seg" id="s3"></div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="loader-pw">
+      <div class="loader-ph">
+        <span class="loader-pl">PROGRESS</span>
+        <span class="loader-pp" id="tPct">0%</span>
+      </div>
+      <div class="loader-pt">
+        <div class="loader-pf" id="tFill"><div class="loader-ps"></div></div>
+      </div>
+    </div>
+
+    <!-- CONSOLE -->
+    <div class="loader-con">
+      <div class="loader-con-tb">
+        <div class="loader-con-dot" style="background:#ff5f56"></div>
+        <div class="loader-con-dot" style="background:#ffbd2e"></div>
+        <div class="loader-con-dot" style="background:#27c93f"></div>
+        <span class="loader-con-tt">console — loader.log</span>
+      </div>
+      <div class="loader-con-log" id="tLog"></div>
+    </div>
+
+    <!-- BUTTON -->
+    <button class="loader-btn" id="tBtn" disabled>LAUNCH</button>
+
+    <!-- FOOTER -->
+    <div class="loader-ft">
+      <span id="tHwid">HWID&nbsp;·&nbsp;A7F3-1C9E-44B0</span>
+      <span id="tPing">syncing…</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* XSS-safe string esc */
+  function esc(s){var d=document.createElement('div');d.textContent=''+s;return d.innerHTML}
+
+  /* DOM refs */
+  var el={
+    title:document.getElementById('tTitle'),
+    version:document.getElementById('tVersion'),
+    dot:document.getElementById('tDot'),
+    phase:document.getElementById('tPhase'),
+    badge:document.getElementById('tBadge'),
+    seg:[
+      document.getElementById('s0'),
+      document.getElementById('s1'),
+      document.getElementById('s2'),
+      document.getElementById('s3')
+    ],
+    pct:document.getElementById('tPct'),
+    fill:document.getElementById('tFill'),
+    log:document.getElementById('tLog'),
+    btn:document.getElementById('tBtn'),
+    hwid:document.getElementById('tHwid'),
+    ping:document.getElementById('tPing')
+  };
+
+  /* state */
+  var state={progress:0,ready:false,launch:'idle'};
+  var ACCENT='#00d4ff',PURPLE='#8b5cf6',GREEN='#3ef0a3',DIM='#26323d';
+  var DURATION=6000;
+
+  /* log definitions */
+  var LOGS=[
+    {tag:'[sys]', text:'Bootstrapping secure environment',            type:'info',  at:2},
+    {tag:'[net]', text:'Establishing encrypted tunnel → edge-07',      type:'info',  at:8},
+    {tag:'[auth]',text:'Reading hardware fingerprint',                 type:'info',  at:16},
+    {tag:'[auth]',text:'Validating license key ····-····-9F2A',       type:'warn',  at:26},
+    {tag:'[auth]',text:'License valid — tier: PREMIUM',               type:'ok',    at:38},
+    {tag:'[cdn]', text:'Fetching module manifest (rev 4471)',          type:'info',  at:47},
+    {tag:'[cdn]', text:'Downloading payload — 3.24 MB',                type:'action',at:55},
+    {tag:'[core]',text:'Decrypting modules (AES-256)',                 type:'info',  at:63},
+    {tag:'[core]',text:'Mapping target process pid:8124',              type:'info',  at:71},
+    {tag:'[core]',text:'Allocating memory region 0x7FF…',              type:'info',  at:78},
+    {tag:'[core]',text:'Resolving imports · bypassing checks',         type:'warn',  at:85},
+    {tag:'[inj]', text:'Injecting modules → hooks installed',         type:'action',at:93},
+    {tag:'[inj]', text:'Integrity OK · all systems nominal',           type:'ok',    at:98}
+  ];
+  var TAG_C={info:'#7f9bb0',warn:'#ffcf5c',ok:'#3ef0a3',action:'#00d4ff'};
+
+  function hexA(h,a){var n=parseInt(h.slice(1),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'}
+
+  function makeLog(d,elapsed){
+    return {time:'+'+elapsed.toFixed(2),tag:d.tag,text:d.text,color:TAG_C[d.type]};
+  }
+
+  /* append a log line via DOM methods (XSS-safe) */
+  function appendLog(log){
+    var line=document.createElement('div');line.className='log-line';
+    var tm=document.createElement('span');tm.className='log-tm';tm.textContent=log.time;
+    var tx=document.createElement('span');tx.className='log-txt';tx.style.color=log.color;
+    var tg=document.createElement('span');tg.className='log-tag';tg.textContent=log.tag+' ';
+    tx.appendChild(tg);tx.appendChild(document.createTextNode(log.text));
+    line.appendChild(tm);line.appendChild(tx);
+    el.log.appendChild(line);
+    el.log.scrollTop=el.log.scrollHeight;
+  }
+
+  function updateCursor(){
+    var old=document.getElementById('cl');
+    if(old)old.remove();
+    var c=document.createElement('div');c.className='cursor-line';c.id='cl';
+    var ts=document.createElement('span');ts.className='cursor-tm';
+    if(state.ready)ts.textContent='+'+(DURATION/1000).toFixed(2);
+    var ps=document.createElement('span');ps.className='cursor-pr';
+    if(state.ready)ps.textContent='ready ';
+    var bl=document.createElement('span');bl.className='cursor-blk';
+    ps.appendChild(bl);
+    c.appendChild(ts);c.appendChild(ps);
+    el.log.appendChild(c);
+    el.log.scrollTop=el.log.scrollHeight;
+  }
+
+  function render(){
+    var p=state.progress,ready=state.ready,launch=state.launch;
+    var step=ready?3:(p<25?0:p<50?1:2);
+
+    /* segments */
+    var sc=[{c:DIM,s:'none'},{c:DIM,s:'none'},{c:DIM,s:'none'},{c:DIM,s:'none'}];
+    for(var i=0;i<4;i++){
+      if(i<step){sc[i]={c:GREEN,s:'0 0 10px '+hexA(GREEN,0.55)}}
+      else if(i===step&&!ready){sc[i]={c:ACCENT,s:'0 0 12px '+hexA(ACCENT,0.7)}}
+      else if(i===step&&ready){sc[i]={c:GREEN,s:'0 0 12px '+hexA(GREEN,0.7)}}
+    }
+    for(var i=0;i<4;i++){el.seg[i].style.background=sc[i].c;el.seg[i].style.boxShadow=sc[i].s}
+
+    /* phase label */
+    var phases=['INITIALIZING','CHECKING LICENSE','INJECTING','READY'];
+    el.phase.textContent=phases[step];
+
+    /* badge */
+    var bm=[
+      {t:'CONNECTING',c:PURPLE},{t:'AUTHENTICATED',c:GREEN},
+      {t:'INJECTING',c:ACCENT},{t:'READY',c:GREEN}
+    ];
+    var b=bm[step];
+    el.badge.textContent=b.t;
+    el.badge.style.color=b.c;
+    el.badge.style.borderColor=hexA(b.c,0.4);
+    el.badge.style.background=hexA(b.c,0.1);
+    el.badge.style.boxShadow='0 0 16px -6px '+b.c;
+
+    /* dot */
+    el.dot.style.background=b.c;
+    el.dot.style.boxShadow='0 0 10px '+b.c;
+
+    /* progress */
+    el.pct.textContent=p+'%';
+    el.fill.style.width=p+'%';
+
+    /* button */
+    el.btn.disabled=!ready||launch!=='idle';
+    el.btn.className='loader-btn';
+    if(!ready){/* disabled via css */}
+    else if(launch==='done'){el.btn.classList.add('done');el.btn.textContent='INJECTED ✓'}
+    else if(launch==='launching'){
+      el.btn.classList.add('launching');
+      el.btn.innerHTML='<span class="loader-btn-spinner"></span> LAUNCHING';
+    }else{
+      el.btn.classList.add('ready');el.btn.textContent='LAUNCH'
+    }
+
+    /* ping */
+    el.ping.innerHTML=ready?'24ms · edge-07':'syncing…';
+  }
+
+  /* boot sequence */
+  var t0,timer,pushed;
+
+  function tick(now){
+    var t=Math.min(1,(now-t0)/DURATION);
+    var eased=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    var pct=Math.round(eased*100);
+    var es=(now-t0)/1000;
+
+    while(pushed<LOGS.length&&pct>=LOGS[pushed].at){
+      appendLog(makeLog(LOGS[pushed],es));pushed++
+    }
+
+    var done=t>=1;
+    state.progress=pct;
+    if(done)state.ready=true;
+    render();updateCursor();
+
+    if(done&&timer){clearInterval(timer);timer=null}
+  }
+
+  function onLaunch(){
+    if(!state.ready||state.launch!=='idle')return;
+    state.launch='launching';render();
+    setTimeout(function(){state.launch='done';render()},1700)
+  }
+
+  function init(){
+    var rm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(rm){
+      for(var i=0;i<LOGS.length;i++){
+        appendLog(makeLog(LOGS[i],(LOGS[i].at/100)*(DURATION/1000)))
+      }
+      state.progress=100;state.ready=true;render();updateCursor();return
+    }
+    t0=window.performance?performance.now():Date.now();pushed=0;
+    timer=setInterval(function(){var n=window.performance?performance.now():Date.now();tick(n)},55)
+  }
+
+  el.btn.addEventListener('click',onLaunch);
+  init();
+})();
+</script>
+</body>
+</html>

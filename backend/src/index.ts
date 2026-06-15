@@ -52,6 +52,14 @@ app.use("/api/admin", adminRoutes);
 // Mount at root since all routes are fully qualified with /api/...
 app.use("/", userContentRoutes);
 
+// Profile pages — serve the static profile.html (JS reads username from URL)
+app.get("/profile", (_req, res) => {
+  res.sendFile(path.join(publicDir, "profile.html"));
+});
+app.get("/profile/:username", (_req, res) => {
+  res.sendFile(path.join(publicDir, "profile.html"));
+});
+
 // 404 handler — skip for paths that might be static files
 app.use((req, res) => {
   // Don't 404 for root — index.html is served by express.static
