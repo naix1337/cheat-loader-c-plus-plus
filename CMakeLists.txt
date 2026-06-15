@@ -136,7 +136,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/config/config.example.json"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/config/config.example.json"
-    COMMENT "Copying config.example.json to output directory"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/config/config.json"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/config/config.json"
+    COMMENT "Copying config files to output directory"
 )
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

@@ -118,10 +118,15 @@ void WebViewManager::navigateToLocal(const std::string& page_name) {
     auto ui_str = std::filesystem::weakly_canonical(ui_dir).wstring();
 
     if (startsWith(html_str, ui_str) && std::filesystem::exists(html_path)) {
-        // Convert to proper file:/// URL
+        // Convert to proper file:/// URL with URL-encoding
         std::wstring file_url = L"file:///";
         for (auto& c : html_str) {
             if (c == L'\\') file_url += L'/';
+            else if (c == L' ') file_url += L"%20";
+            else if (c == L'#') file_url += L"%23";
+            else if (c == L'%') file_url += L"%25";
+            else if (c == L'&') file_url += L"%26";
+            else if (c == L'?') file_url += L"%3F";
             else file_url += c;
         }
         navigate(file_url);
