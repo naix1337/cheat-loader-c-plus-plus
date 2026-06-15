@@ -1,11 +1,8 @@
 #include "ui/views/TwoFAView.h"
-
 #include "ui/components/Button.h"
 #include "ui/components/InputField.h"
 #include "ui/theme/Theme.h"
-
 #include <imgui.h>
-
 #include <chrono>
 #include <cstring>
 
@@ -14,142 +11,98 @@ namespace ui::views {
 TwoFAView::TwoFAView(auth::AuthService& auth_service, MainThreadEnqueue enqueue)
     : auth_service_(auth_service), enqueue_(std::move(enqueue)) {}
 
-void TwoFAView::reset() {
-    std::memset(otp_, 0, sizeof(otp_));
-    loading_ = false;
-    error_message_.clear();
-}
+void TwoFAView::reset() { std::memset(otp_, 0, sizeof(otp_)); loading_ = false; error_message_.clear(); }
 
 int TwoFAView::totpSecondsRemaining() const {
-    const auto now = std::chrono::system_clock::now();
-    const auto seconds =
-        std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
-    return 30 - static_cast<int>(seconds % 30);
+    auto now = std::chrono::system_clock::now();
+    auto sec = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+    return 30 - (int)(sec % 30);
 }
 
 void TwoFAView::submitOtp() {
-    if (loading_) {
-        return;
-    }
-
-    if (std::strlen(otp_) != 6) {
-        error_message_ = "Enter the 6-digit code";
-        return;
-    }
-
-    loading_ = true;
-    error_message_.clear();
-
-    const std::string otp(otp_);
-    auth_service_.verifyTwoFA(
-        otp, [this, enqueue = enqueue_](auth::LoginResult result) {
-            enqueue([this, result = std::move(result)]() mutable {
-                loading_ = false;
-                if (!result.success) {
-                    error_message_ = result.error_message.empty()
-                                         ? "Invalid authentication code"
-                                         : result.error_message;
-                    std::memset(otp_, 0, sizeof(otp_));
-                }
-            });
+    if (loading_) return;
+    if (std::strlen(otp_) != 6) { error_message_ = "Enter the 6-digit code"; return; }
+    loading_ = true; error_message_.clear();
+    std::string otp(otp_);
+    auth_service_.verifyTwoFA(otp, [this, enqueue = enqueue_](auth::LoginResult r) {
+        enqueue([this, r = std::move(r)]() mutable {
+            loading_ = false;
+            if (!r.success) { error_message_ = r.error_message.empty() ? "Invalid code" : r.error_message; std::memset(otp_, 0, sizeof(otp_)); }
         });
+    });
 }
 
 void TwoFAView::render() {
-    const ImVec2 window_size = ImGui::GetIO().DisplaySize;
-    const ImVec2 panel_size(400.0f, 340.0f);
-    ImGui::SetNextWindowPos(
-        ImVec2((window_size.x - panel_size.x) * 0.5f, (window_size.y - panel_size.y) * 0.5f),
-        ImGuiCond_Always);
-    ImGui::SetNextWindowSize(panel_size, ImGuiCond_Always);
-
+    auto vs = ImGui::GetIO().DisplaySize;
+    ImVec2 ps(380.0f, 300.0f);
+    float cx = (vs.x - ps.x) * 0.5f, cy = (vs.y - ps.y) * 0.5f;
+    ImGui::SetNextWindowPos(ImVec2(cx, cy), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ps, ImGuiCond_Always);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, theme::kSurface);
-    ImGui::PushStyleColor(ImGuiCol_Border, theme::withAlpha(theme::kAccent, 0.3f));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, theme::withAlpha(theme::kAccent, 0.35f));
+    ImGui::Begin("##2fa", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 
-    ImGui::Begin("##twofa_panel", nullptr,
-                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    auto* dl = ImGui::GetWindowDrawList();
+    ImVec2 wp = ImGui::GetWindowPos();
 
-    ImDrawList* dl = ImGui::GetWindowDrawList();
+    // Diamond logo
+    float lx = wp.x + ps.x * 0.5f, ly = wp.y + 34.0f;
+    dl->AddCircleFilled(ImVec2(lx, ly), 20.0f, IM_COL32(0, 212, 255, 25), 40);
+    dl->AddQuadFilled(ImVec2(lx - 7, ly), ImVec2(lx, ly - 10), ImVec2(lx + 7, ly), ImVec2(lx, ly + 10), IM_COL32(0, 212, 255, 220));
 
-    // AETHER logo
-    const ImVec2 panel_pos = ImGui::GetWindowPos();
-    theme::drawLogo(dl, ImVec2(panel_pos.x + panel_size.x * 0.5f, panel_pos.y + 38.0f), 14.0f);
+    ImGui::SetCursorPosY(54.0f);
+    const char* title = "TWO-FACTOR AUTH";
+    float tw = ImGui::CalcTextSize(title).x;
+    ImGui::SetCursorPosX((ps.x - tw) * 0.5f);
+    ImGui::PushStyleColor(ImGuiCol_Text, theme::kAccent); ImGui::TextUnformatted(title); ImGui::PopStyleColor();
 
-    ImGui::SetCursorPosY(60.0f);
+    ImGui::Spacing();
+    const char* sub = "Enter the 6-digit code from your authenticator app";
+    float sw = ImGui::CalcTextSize(sub).x;
+    ImGui::SetCursorPosX((ps.x - sw) * 0.5f);
+    ImGui::PushStyleColor(ImGuiCol_Text, theme::kTextDim); ImGui::TextUnformatted(sub); ImGui::PopStyleColor();
 
-    // Title
-    ImGui::PushStyleColor(ImGuiCol_Text, theme::kAccent);
-    const float title_w = ImGui::CalcTextSize("TWO-FACTOR AUTH").x;
-    ImGui::SetCursorPosX((panel_size.x - title_w) * 0.5f);
-    ImGui::TextUnformatted("TWO-FACTOR AUTH");
+    ImGui::Spacing();
+    float sep = ImGui::GetCursorScreenPos().y;
+    dl->AddLine(ImVec2(wp.x + 30, sep), ImVec2(wp.x + ps.x - 30, sep), IM_COL32(0, 212, 255, 25));
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
+
+    bool edited = components::inputDigitsOnly("AUTHENTICATION CODE", otp_, sizeof(otp_), 6, loading_);
+    if (edited && std::strlen(otp_) == 6) submitOtp();
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    int sec = totpSecondsRemaining();
+    std::string timer = std::format("Code refreshes in {} s", sec);
+    float tiw = ImGui::CalcTextSize(timer.c_str()).x;
+    ImGui::SetCursorPosX((ps.x - tiw) * 0.5f);
+    ImGui::PushStyleColor(ImGuiCol_Text, sec <= 5 ? theme::kRed : theme::kTextDim);
+    ImGui::TextUnformatted(timer.c_str());
     ImGui::PopStyleColor();
 
     ImGui::Spacing();
+    if (components::button("VERIFY", loading_, loading_, ImVec2(-1, 38))) submitOtp();
 
-    // Subtitle
-    ImGui::PushStyleColor(ImGuiCol_Text, theme::kTextDim);
-    const float sub_w = ImGui::CalcTextSize("Enter the 6-digit code from your authenticator app").x;
-    ImGui::SetCursorPosX((panel_size.x - sub_w) * 0.5f);
-    ImGui::TextUnformatted("Enter the 6-digit code from your authenticator app");
-    ImGui::PopStyleColor();
-
-    ImGui::Spacing();
-    const float sep_y = ImGui::GetCursorScreenPos().y;
-    dl->AddLine(ImVec2(panel_pos.x + 30, sep_y), ImVec2(panel_pos.x + panel_size.x - 30, sep_y),
-                ImGui::ColorConvertFloat4ToU32(theme::withAlpha(theme::kAccent, 0.12f)));
-    ImGui::Spacing();
-
-    // OTP input
-    const bool edited =
-        components::inputDigitsOnly("AUTHENTICATION CODE", otp_, sizeof(otp_), 6, loading_);
-    if (edited && std::strlen(otp_) == 6) {
-        submitOtp();
-    }
-
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    // TOTP timer
-    const int secs = totpSecondsRemaining();
-    ImGui::PushStyleColor(ImGuiCol_Text, secs <= 5 ? theme::kRed : theme::kTextDim);
-    const float timer_w = ImGui::CalcTextSize("Code refreshes in %d s").x;
-    ImGui::SetCursorPosX((panel_size.x - timer_w) * 0.5f);
-    ImGui::Text("Code refreshes in %d s", secs);
-    ImGui::PopStyleColor();
-
-    ImGui::Spacing();
-
-    // Verify button
-    if (components::button("VERIFY", loading_, loading_, ImVec2(-1, 40))) {
-        submitOtp();
-    }
-
-    // Error
     if (!error_message_.empty()) {
         ImGui::Spacing();
         ImGui::PushStyleColor(ImGuiCol_Text, theme::kRed);
-        const float err_w = ImGui::CalcTextSize(error_message_.c_str()).x;
-        ImGui::SetCursorPosX((panel_size.x - err_w) * 0.5f);
+        float ew = ImGui::CalcTextSize(error_message_.c_str()).x;
+        ImGui::SetCursorPosX((ps.x - ew) * 0.5f);
         ImGui::TextUnformatted(error_message_.c_str());
         ImGui::PopStyleColor();
     }
 
     ImGui::Spacing();
-    const float sep2_y = ImGui::GetCursorScreenPos().y;
-    dl->AddLine(ImVec2(panel_pos.x + 30, sep2_y), ImVec2(panel_pos.x + panel_size.x - 30, sep2_y),
-                ImGui::ColorConvertFloat4ToU32(theme::withAlpha(theme::kAccent, 0.12f)));
+    float s2 = ImGui::GetCursorScreenPos().y;
+    dl->AddLine(ImVec2(wp.x + 30, s2), ImVec2(wp.x + ps.x - 30, s2), IM_COL32(0, 212, 255, 25));
     ImGui::Spacing();
 
-    // Back button
-    if (components::button("BACK TO LOGIN", false, loading_, ImVec2(-1, 32))) {
-        auth_service_.logoutLocal();
-        reset();
+    if (components::button("BACK TO LOGIN", false, loading_, ImVec2(-1, 30))) {
+        auth_service_.logoutLocal(); reset();
     }
 
     ImGui::End();
-    ImGui::PopStyleVar();
     ImGui::PopStyleColor(2);
 }
 
