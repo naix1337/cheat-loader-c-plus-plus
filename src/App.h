@@ -14,8 +14,8 @@
 
 class App {
 public:
-    static constexpr int kWindowWidth = 520;
-    static constexpr int kWindowHeight = 620;
+    static constexpr int kWindowWidth = 540;
+    static constexpr int kWindowHeight = 700;
 
     explicit App(HINSTANCE instance);
     ~App();
