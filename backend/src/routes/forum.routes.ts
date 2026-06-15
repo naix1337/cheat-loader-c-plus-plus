@@ -124,11 +124,11 @@ function requireAuth(req: AuthRequest, res: Response, next: () => void): void {
  */
 async function requireAdmin(req: AuthRequest, res: Response, next: () => void): Promise<void> {
   try {
-    const result = await pool.query<{ username: string }>(
-      `SELECT username FROM users WHERE id = $1`,
+    const result = await pool.query<{ role: string }>(
+      `SELECT role FROM users WHERE id = $1`,
       [req.userId]
     );
-    const isAdmin = result.rows[0]?.username === "admin";
+    const isAdmin = result.rows[0]?.role === "admin";
     if (!isAdmin) {
       res.status(403).json({ error: "Forbidden — admin access required" });
       return;
@@ -569,11 +569,11 @@ router.delete("/api/forum/posts/:id", requireAuth, async (req: AuthRequest, res:
     const postId = req.params.id as string;
 
     // Determine if user is admin
-    const userResult = await pool.query<{ username: string }>(
-      `SELECT username FROM users WHERE id = $1`,
+    const userResult = await pool.query<{ role: string }>(
+      `SELECT role FROM users WHERE id = $1`,
       [req.userId]
     );
-    const isAdmin = userResult.rows[0]?.username === "admin";
+    const isAdmin = userResult.rows[0]?.role === "admin";
 
     const deleted = await forumService.deletePost(postId, req.userId!, isAdmin);
 

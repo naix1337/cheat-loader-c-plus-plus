@@ -112,6 +112,12 @@ router.post("/", registerLimiter, async (req: Request, res: Response): Promise<v
   // Normalize
   const normalizedEmail = email.toLowerCase().trim();
 
+  // Block reserved usernames
+  if (username.toLowerCase() === "admin") {
+    res.status(400).json({ error: "This username is reserved" });
+    return;
+  }
+
   // Check duplicate
   const existing = await pool.query(
     `SELECT id FROM users WHERE username = $1 OR email = $2 LIMIT 1`,
@@ -127,8 +133,8 @@ router.post("/", registerLimiter, async (req: Request, res: Response): Promise<v
   try {
     const passwordHash = await hashPassword(password);
     await pool.query(
-      `INSERT INTO users (username, email, password_hash, email_verified, two_fa_enabled)
-       VALUES ($1, $2, $3, TRUE, FALSE)`,
+      `INSERT INTO users (username, email, password_hash, email_verified, two_fa_enabled, role)
+       VALUES ($1, $2, $3, TRUE, FALSE, 'user')`,
       [username, normalizedEmail, passwordHash]
     );
 
