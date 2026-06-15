@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include <nlohmann/json.hpp>
+
 #include <filesystem>
 #include <format>
 #include <regex>
@@ -161,9 +163,9 @@ HRESULT WebViewManager::onWebMessageReceived(ICoreWebView2*, ICoreWebView2WebMes
                     enqueue([this, result = std::move(result)]() {
                         nlohmann::json response;
                         response["action"] = "login_result";
-                        if (result.success) {
+                        if (result.success && result.user.has_value()) {
                             response["success"] = true;
-                            response["username"] = result.user.username;
+                            response["username"] = result.user->username;
                         } else if (result.requires_2fa) {
                             response["requires_2fa"] = true;
                         } else {

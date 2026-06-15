@@ -45,7 +45,7 @@ find_package(CURL CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(webview2 CONFIG REQUIRED)
+find_package(unofficial-webview2 CONFIG REQUIRED)
 
 # ---------------------------------------------------------------------------
 # Sources
@@ -79,7 +79,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenSSL::Crypto
     nlohmann_json::nlohmann_json
     spdlog::spdlog
-    Microsoft::Web::WebView2
+    unofficial::webview2::webview2
     d3d11 dxgi d3dcompiler dwmapi shell32
 )
 
