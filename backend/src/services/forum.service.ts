@@ -346,9 +346,9 @@ export async function listThreads(
     LEFT JOIN forum_posts p ON p.thread_id = t.id
     LEFT JOIN LATERAL (
       SELECT
-        t2.id          AS last_thread_id,
-        t2.title       AS last_thread_title,
-        t2.slug        AS last_thread_slug,
+        t.id           AS last_thread_id,
+        t.title        AS last_thread_title,
+        t.slug         AS last_thread_slug,
         pp.id          AS last_post_id,
         pp.author_id   AS last_author_id,
         uu.username    AS last_author_username,
