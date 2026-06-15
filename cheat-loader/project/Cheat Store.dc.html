@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; }
+  @keyframes cs-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes cs-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.3; } }
+  @keyframes cs-spin { to { transform: rotate(360deg); } }
+  @keyframes cs-rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes cs-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.5), 0 10px 30px -8px rgba(0,212,255,0.45); } 50% { box-shadow: 0 0 24px 1px rgba(0,212,255,0.6), 0 10px 36px -6px rgba(0,212,255,0.6); } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; font-family: 'Space Grotesk', system-ui, sans-serif; background: radial-gradient(130% 80% at 50% -10%, #0d1622 0%, #0a0a0f 46%, #060709 100%); color: #c7d6e2;">
+
+  <div style="position: fixed; inset: 0; background-image: linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px); background-size: 44px 44px; -webkit-mask-image: radial-gradient(90% 70% at 50% 25%, #000 30%, transparent 100%); mask-image: radial-gradient(90% 70% at 50% 25%, #000 30%, transparent 100%); pointer-events: none;"></div>
+  <div style="position: fixed; inset: 0; background-image: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px); background-size: 100% 6px; animation: cs-scan 0.5s steps(3) infinite; pointer-events: none; opacity: 0.5;"></div>
+  <div style="position: fixed; top: -160px; left: 50%; width: 760px; height: 380px; transform: translateX(-50%); background: radial-gradient(circle, rgba(0,212,255,0.14), transparent 70%); filter: blur(34px); pointer-events: none;"></div>
+
+  <div style="position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 20px 22px 130px;">
+
+    <!-- TOP BAR -->
+    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 26px;">
+      <a href="Cheat Forum.dc.html" style="display: flex; align-items: center; gap: 9px; text-decoration: none; padding: 9px 14px; border-radius: 10px; background: rgba(16,22,30,0.7); border: 1px solid rgba(0,212,255,0.18); color: #9fc6dc; font-size: 13px; font-weight: 600;" style-hover="{{ linkHover }}"><span style="color: #00d4ff; font-size: 15px;">‹</span> Discussion Board</a>
+      <a href="Cheat Profile.dc.html" style="text-decoration: none; padding: 9px 14px; border-radius: 10px; background: rgba(2,6,10,0.5); border: 1px solid rgba(0,212,255,0.16); color: #9fc6dc; font-size: 13px; font-weight: 600;" style-hover="{{ linkHover }}">Profile</a>
+      <div style="display: flex; align-items: center; gap: 9px; margin-left: auto;">
+        <div style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,212,255,0.5); border-radius: 8px; background: linear-gradient(145deg, rgba(0,212,255,0.16), rgba(0,212,255,0.02)); box-shadow: 0 0 14px -2px rgba(0,212,255,0.5);"><div style="width: 11px; height: 11px; background: #00d4ff; transform: rotate(45deg); border-radius: 2px; box-shadow: 0 0 9px #00d4ff;"></div></div>
+        <div style="font-size: 15px; font-weight: 700; letter-spacing: 2.5px; color: #eaf7ff; text-shadow: 0 0 12px rgba(0,212,255,0.5);">AETHER</div>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div style="text-align: center; margin-bottom: 28px;">
+      <div style="display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: #3ef0a3; padding: 6px 13px; border: 1px solid rgba(62,240,163,0.3); border-radius: 999px; background: rgba(62,240,163,0.07); margin-bottom: 16px;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #3ef0a3; box-shadow: 0 0 8px #3ef0a3; animation: cs-blink 2s infinite;"></span>INSTANT DELIVERY · ACTIVE NOW</div>
+      <h1 style="margin: 0; font-size: 38px; font-weight: 700; letter-spacing: 0.5px; color: #eaf7ff; text-shadow: 0 0 26px rgba(0,212,255,0.4); text-wrap: balance;">Get access in seconds</h1>
+      <p style="margin: 12px auto 0; max-width: 520px; font-size: 15px; line-height: 1.6; color: #8aa0b2;">Pick a product, choose a plan, and your license is delivered the moment payment clears. HWID-locked, fully undetected, updated daily.</p>
+    </div>
+
+    <!-- GAME SELECTOR -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 30px;">
+      <sc-for list="{{ games }}" as="g" hint-placeholder-count="3">
+        <div onClick="{{ g.onClick }}" style="position: relative; padding: 18px; border-radius: 15px; cursor: pointer; background: {{ g.bg }}; border: 1px solid {{ g.border }}; box-shadow: {{ g.glow }}; transition: all 0.18s ease;" style-hover="{{ cardHover }}">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; flex: none; border-radius: 12px; background: {{ g.iconBg }}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #03121a; box-shadow: {{ g.iconGlow }};">{{ g.mark }}</div>
+            <div style="min-width: 0; flex: 1;">
+              <div style="font-size: 15px; font-weight: 700; color: #eaf7ff; letter-spacing: 0.5px;">{{ g.name }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b; margin-top: 3px;">{{ g.type }}</div>
+            </div>
+            <div style="width: 18px; height: 18px; flex: none; border-radius: 50%; border: 2px solid {{ g.radioBorder }}; background: {{ g.radioBg }}; box-shadow: {{ g.radioGlow }};"></div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 1px; color: {{ g.statusColor }}; padding: 4px 9px; border-radius: 999px; background: {{ g.statusBg }}; border: 1px solid {{ g.statusBorder }};"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{ g.statusColor }}; box-shadow: 0 0 6px {{ g.statusColor }};"></span>{{ g.status }}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b;">{{ g.modules }} modules</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- PRICING -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; align-items: stretch;">
+      <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="4">
+        <div onClick="{{ t.onClick }}" style="position: relative; display: flex; flex-direction: column; padding: 22px 20px; border-radius: 16px; cursor: pointer; background: {{ t.bg }}; border: 1px solid {{ t.border }}; box-shadow: {{ t.glow }}; transition: all 0.18s ease;" style-hover="{{ cardHover }}">
+          <sc-if value="{{ t.popular }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: #0c0a18; padding: 4px 12px; border-radius: 999px; background: linear-gradient(90deg, #c4b5fd, #00d4ff); white-space: nowrap; box-shadow: 0 4px 14px -4px rgba(139,92,246,0.7);">MOST POPULAR</div>
+          </sc-if>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: {{ t.labelColor }};">{{ t.label }}</div>
+          <div style="display: flex; align-items: baseline; gap: 3px; margin-top: 12px;">
+            <span style="font-size: 16px; font-weight: 600; color: #8aa0b2;">$</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 700; color: #eaf7ff; line-height: 1;">{{ t.price }}</span>
+          </div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b; margin-top: 6px;">{{ t.per }}</div>
+
+          <div style="height: 1px; margin: 16px 0; background: linear-gradient(90deg, transparent, rgba(0,212,255,0.2), transparent);"></div>
+
+          <div style="display: flex; flex-direction: column; gap: 9px; flex: 1;">
+            <sc-for list="{{ t.features }}" as="f" hint-placeholder-count="3">
+              <div style="display: flex; align-items: flex-start; gap: 9px; font-size: 12.5px; line-height: 1.4; color: #b6c7d4;"><span style="color: #3ef0a3; flex: none;">✓</span>{{ f }}</div>
+            </sc-for>
+          </div>
+
+          <div style="margin-top: 18px; text-align: center; padding: 11px; border-radius: 10px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1px; color: {{ t.btnColor }}; background: {{ t.btnBg }}; border: {{ t.btnBorder }};">{{ t.btnLabel }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- TRUST ROW -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 26px;">
+      <sc-for list="{{ trust }}" as="tr" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 15px 16px; border-radius: 13px; background: linear-gradient(180deg, rgba(16,22,30,0.6), rgba(10,13,18,0.6)); border: 1px solid rgba(0,212,255,0.12);">
+          <div style="width: 36px; height: 36px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #00d4ff; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2);">{{ tr.icon }}</div>
+          <div style="min-width: 0;"><div style="font-size: 13px; font-weight: 600; color: #dbe8f2;">{{ tr.title }}</div><div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b; margin-top: 2px;">{{ tr.sub }}</div></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="text-align: center; margin-top: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: #3c4e5e;">SECURE CHECKOUT · VISA · MASTERCARD · CRYPTO · PAYPAL</div>
+  </div>
+
+  <!-- CHECKOUT BAR -->
+  <sc-if value="{{ showCheckout }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; justify-content: center; padding: 0 16px 18px; animation: cs-rise 0.25s ease both; pointer-events: none;">
+      <div style="pointer-events: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 14px 18px; width: 100%; max-width: 720px; padding: 14px 18px; border-radius: 15px; background: linear-gradient(180deg, rgba(20,27,37,0.95), rgba(11,15,21,0.97)); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid {{ barBorder }}; box-shadow: 0 18px 50px -14px rgba(0,0,0,0.85), 0 0 40px -16px {{ barGlow }};">
+        <div style="min-width: 0; flex: 1;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #4f6478;">{{ barTop }}</div>
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
+            <span style="font-size: 16px; font-weight: 700; color: #eaf7ff; white-space: nowrap;">{{ barTitle }}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: #00d4ff; text-shadow: 0 0 10px rgba(0,212,255,0.5);">{{ barPrice }}</span>
+          </div>
+        </div>
+        <button onClick="{{ onCheckout }}" style="display: flex; align-items: center; justify-content: center; gap: 9px; min-width: 180px; padding: 14px 24px; border-radius: 11px; border: none; cursor: {{ checkoutCursor }}; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 1.5px; color: {{ checkoutColor }}; background: {{ checkoutBg }}; box-shadow: {{ checkoutShadow }}; animation: {{ checkoutAnim }};" style-hover="{{ btnHover }}">
+          <sc-if value="{{ checkoutSpinning }}" hint-placeholder-val="{{ false }}"><span style="width: 14px; height: 14px; border: 2px solid rgba(3,18,26,0.35); border-top-color: #03121a; border-radius: 50%; display: inline-block; animation: cs-spin 0.6s linear infinite;"></span></sc-if>
+          {{ checkoutLabel }}
+        </button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  GAMES = [
+    { id: 'frostline', name: 'FROSTLINE', type: 'Tactical FPS', mark: 'F', status: 'UNDETECTED', undetected: true, modules: 14, color: 'linear-gradient(145deg,#1ee0ff,#0a7fa6)',
+      prices: { day: '5.99', week: '16.99', month: '44.99', life: '219.99' } },
+    { id: 'apexfall', name: 'APEXFALL', type: 'Battle Royale', mark: 'A', status: 'UNDETECTED', undetected: true, modules: 11, color: 'linear-gradient(145deg,#3ef0a3,#1f9e72)',
+      prices: { day: '6.99', week: '18.99', month: '49.99', life: '249.99' } },
+    { id: 'overclock', name: 'OVERCLOCK', type: 'Hero Shooter', mark: 'O', status: 'UPDATING', undetected: false, modules: 9, color: 'linear-gradient(145deg,#b39dff,#6d4fd6)',
+      prices: { day: '4.99', week: '13.99', month: '34.99', life: '179.99' } },
+  ];
+
+  TIERS = [
+    { id: 'day', label: '1 DAY', per: 'billed once', features: ['All modules unlocked', 'Aim + visuals suite', 'Standard support'] },
+    { id: 'week', label: '1 WEEK', per: 'billed once', features: ['Everything in Day', 'Config cloud sync', 'Priority support'] },
+    { id: 'month', label: '1 MONTH', per: 'best value · billed monthly', popular: true, features: ['Everything in Week', 'Early beta builds', '1 free HWID reset / mo', 'Skin changer module'] },
+    { id: 'life', label: 'LIFETIME', per: 'one-time payment', features: ['Everything in Month', 'Unlimited HWID resets', 'Lifetime free updates', 'Private Discord role'] },
+  ];
+
+  state = { game: 'frostline', tier: 'month', checkout: 'idle' };
+
+  pickGame = (id) => this.setState({ game: id, checkout: 'idle' });
+  pickTier = (id) => this.setState({ tier: id, checkout: 'idle' });
+  checkout = () => {
+    if (this.state.checkout !== 'idle') return;
+    this.setState({ checkout: 'processing' });
+    setTimeout(() => { if (this.mounted !== false) this.setState({ checkout: 'done' }); }, 1700);
+  };
+  componentDidMount() { this.mounted = true; }
+  componentWillUnmount() { this.mounted = false; }
+
+  renderVals() {
+    const s = this.state;
+    const game = this.GAMES.find(g => g.id === s.game);
+
+    const games = this.GAMES.map(g => {
+      const on = g.id === s.game;
+      const sc = g.undetected ? '#3ef0a3' : '#ffcf5c';
+      return {
+        name: g.name, type: g.type, mark: g.mark, status: g.status, modules: g.modules,
+        onClick: () => this.pickGame(g.id),
+        iconBg: g.color, iconGlow: on ? '0 0 18px -4px rgba(0,212,255,0.7)' : 'none',
+        bg: on ? 'linear-gradient(180deg, rgba(0,212,255,0.1), rgba(12,16,22,0.85))' : 'linear-gradient(180deg, rgba(16,22,30,0.7), rgba(10,13,18,0.75))',
+        border: on ? 'rgba(0,212,255,0.55)' : 'rgba(0,212,255,0.14)',
+        glow: on ? '0 0 40px -14px rgba(0,212,255,0.55)' : 'none',
+        radioBorder: on ? '#00d4ff' : '#33424f',
+        radioBg: on ? '#00d4ff' : 'transparent',
+        radioGlow: on ? '0 0 10px rgba(0,212,255,0.8)' : 'none',
+        statusColor: sc, statusBg: g.undetected ? 'rgba(62,240,163,0.1)' : 'rgba(255,207,92,0.1)',
+        statusBorder: g.undetected ? 'rgba(62,240,163,0.35)' : 'rgba(255,207,92,0.35)',
+      };
+    });
+
+    const tiers = this.TIERS.map(t => {
+      const on = t.id === s.tier;
+      return {
+        label: t.label, per: t.per, features: t.features, popular: !!t.popular,
+        price: game.prices[t.id],
+        onClick: () => this.pickTier(t.id),
+        labelColor: on ? '#00d4ff' : (t.popular ? '#c4b5fd' : '#7f9bb0'),
+        bg: on ? 'linear-gradient(180deg, rgba(0,212,255,0.12), rgba(12,16,22,0.9))'
+              : t.popular ? 'linear-gradient(180deg, rgba(139,92,246,0.1), rgba(12,16,22,0.85))'
+              : 'linear-gradient(180deg, rgba(16,22,30,0.72), rgba(9,12,17,0.8))',
+        border: on ? 'rgba(0,212,255,0.6)' : t.popular ? 'rgba(139,92,246,0.45)' : 'rgba(0,212,255,0.14)',
+        glow: on ? '0 0 44px -14px rgba(0,212,255,0.6)' : t.popular ? '0 0 40px -18px rgba(139,92,246,0.5)' : 'none',
+        btnLabel: on ? 'SELECTED ✓' : 'SELECT PLAN',
+        btnColor: on ? '#03121a' : '#cdeefb',
+        btnBg: on ? 'linear-gradient(180deg, #1ee0ff, #00a6cf)' : 'rgba(2,6,10,0.5)',
+        btnBorder: on ? 'none' : '1px solid rgba(0,212,255,0.22)',
+      };
+    });
+
+    const tier = this.TIERS.find(t => t.id === s.tier);
+    const co = s.checkout;
+    let checkoutLabel = 'CHECKOUT', checkoutBg = 'linear-gradient(180deg,#1ee0ff,#00a6cf)', checkoutColor = '#03121a',
+        checkoutCursor = 'pointer', checkoutShadow = '0 8px 24px -8px rgba(0,212,255,0.55)', checkoutAnim = 'cs-pulse 2.4s ease-in-out infinite',
+        barBorder = 'rgba(0,212,255,0.3)', barGlow = 'rgba(0,212,255,0.5)';
+    if (co === 'processing') { checkoutLabel = 'PROCESSING'; checkoutCursor = 'wait'; checkoutAnim = 'none'; }
+    else if (co === 'done') {
+      checkoutLabel = '✓ CONFIRMED'; checkoutBg = 'rgba(62,240,163,0.15)'; checkoutColor = '#3ef0a3';
+      checkoutShadow = '0 0 24px -6px rgba(62,240,163,0.6)'; checkoutAnim = 'none'; checkoutCursor = 'default';
+      barBorder = 'rgba(62,240,163,0.45)'; barGlow = 'rgba(62,240,163,0.5)';
+    }
+
+    return {
+      games, tiers,
+      showCheckout: !!s.tier,
+      barTop: co === 'done' ? 'ORDER CONFIRMED · LICENSE SENT TO YOUR INBOX' : tier.label + ' ACCESS · ' + game.status,
+      barTitle: co === 'done' ? 'Activated' : game.name,
+      barPrice: '$' + game.prices[s.tier],
+      onCheckout: this.checkout,
+      checkoutLabel, checkoutBg, checkoutColor, checkoutCursor, checkoutShadow, checkoutAnim,
+      checkoutSpinning: co === 'processing',
+      barBorder, barGlow,
+      trust: [
+        { icon: '⚡', title: 'Instant delivery', sub: 'license in < 5 seconds' },
+        { icon: '⟳', title: 'HWID resets', sub: 'included on monthly+' },
+        { icon: '◈', title: 'Secure payment', sub: 'encrypted checkout' },
+        { icon: '✦', title: '24/7 support', sub: 'staff on standby' },
+      ],
+      linkHover: { borderColor: 'rgba(0,212,255,0.45)', color: '#cdeefb' },
+      cardHover: { borderColor: 'rgba(0,212,255,0.4)', transform: 'translateY(-2px)' },
+      btnHover: { filter: 'brightness(1.08)', transform: 'translateY(-1px)' },
+    };
+  }
+}
+</script>
+</body>
+</html>

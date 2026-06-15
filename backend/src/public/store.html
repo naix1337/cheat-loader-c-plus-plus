@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Store — insolution.cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; font-family: 'Space Grotesk', system-ui, sans-serif; color: #c7d6e2; }
+  @keyframes st-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes st-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.3; } }
+  @keyframes st-spin { to { transform: rotate(360deg); } }
+  @keyframes st-rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes st-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.5), 0 10px 30px -8px rgba(0,212,255,0.45); } 50% { box-shadow: 0 0 24px 1px rgba(0,212,255,0.6), 0 10px 36px -6px rgba(0,212,255,0.6); } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── Data ──────────────────────────────────────────────────
+const GAMES = [
+  { id: 'frostline', name: 'FROSTLINE', type: 'Tactical FPS', mark: 'F', status: 'UNDETECTED', undetected: true, modules: 14,
+    color: 'linear-gradient(145deg,#1ee0ff,#0a7fa6)',
+    prices: { day: '5.99', week: '16.99', month: '44.99', life: '219.99' } },
+  { id: 'apexfall', name: 'APEXFALL', type: 'Battle Royale', mark: 'A', status: 'UNDETECTED', undetected: true, modules: 11,
+    color: 'linear-gradient(145deg,#3ef0a3,#1f9e72)',
+    prices: { day: '6.99', week: '18.99', month: '49.99', life: '249.99' } },
+  { id: 'overclock', name: 'OVERCLOCK', type: 'Hero Shooter', mark: 'O', status: 'UPDATING', undetected: false, modules: 9,
+    color: 'linear-gradient(145deg,#b39dff,#6d4fd6)',
+    prices: { day: '4.99', week: '13.99', month: '34.99', life: '179.99' } },
+];
+
+const TIERS = [
+  { id: 'day', label: '1 DAY', per: 'billed once', features: ['All modules unlocked', 'Aim + visuals suite', 'Standard support'] },
+  { id: 'week', label: '1 WEEK', per: 'billed once', features: ['Everything in Day', 'Config cloud sync', 'Priority support'] },
+  { id: 'month', label: '1 MONTH', per: 'best value · billed monthly', popular: true, features: ['Everything in Week', 'Early beta builds', '1 free HWID reset / mo', 'Skin changer module'] },
+  { id: 'life', label: 'LIFETIME', per: 'one-time payment', features: ['Everything in Month', 'Unlimited HWID resets', 'Lifetime free updates', 'Private Discord role'] },
+];
+
+const TRUST = [
+  { icon: '⚡', title: 'Instant delivery', sub: 'license in < 5 seconds' },
+  { icon: '⟳', title: 'HWID resets', sub: 'included on monthly+' },
+  { icon: '◈', title: 'Secure payment', sub: 'encrypted checkout' },
+  { icon: '✦', title: '24/7 support', sub: 'staff on standby' },
+];
+
+// ── State ─────────────────────────────────────────────────
+let state = { game: 'frostline', tier: 'month', checkout: 'idle' };
+
+function setState(update) {
+  state = { ...state, ...update };
+  render();
+}
+
+function pickGame(id) {
+  setState({ game: id, checkout: 'idle' });
+}
+
+function pickTier(id) {
+  setState({ tier: id, checkout: 'idle' });
+}
+
+function doCheckout() {
+  if (state.checkout !== 'idle') return;
+  setState({ checkout: 'processing' });
+  setTimeout(() => {
+    setState({ checkout: 'done' });
+  }, 1700);
+}
+
+// ── Hover helpers ─────────────────────────────────────────
+let hoveredCard = null;
+
+function cardHover(key, el) {
+  el.onmouseenter = () => { hoveredCard = key; render(); };
+  el.onmouseleave = () => { hoveredCard = null; render(); };
+}
+
+// ── Render ────────────────────────────────────────────────
+function render() {
+  const s = state;
+  const game = GAMES.find(g => g.id === s.game);
+  const tier = TIERS.find(t => t.id === s.tier);
+
+  // Game cards
+  const gameCards = GAMES.map(g => {
+    const on = g.id === s.game;
+    const sc = g.undetected ? '#3ef0a3' : '#ffcf5c';
+    return `
+      <div class="st-game-card ${on ? 'active' : ''}" data-game="${g.id}"
+        style="background: ${on ? 'linear-gradient(180deg, rgba(0,212,255,0.1), rgba(12,16,22,0.85))' : 'linear-gradient(180deg, rgba(16,22,30,0.7), rgba(10,13,18,0.75))'};
+               border-color: ${on ? 'rgba(0,212,255,0.55)' : 'rgba(0,212,255,0.14)'};
+               box-shadow: ${on ? '0 0 40px -14px rgba(0,212,255,0.55)' : 'none'};">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="st-icon" style="background:${g.color};box-shadow:${on ? '0 0 18px -4px rgba(0,212,255,0.7)' : 'none'};">${g.mark}</div>
+          <div style="min-width:0;flex:1;">
+            <div class="st-game-name">${g.name}</div>
+            <div class="st-game-type">${g.type}</div>
+          </div>
+          <div class="st-radio ${on ? 'active' : ''}"></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+          <span class="st-status" style="color:${sc};background:${g.undetected ? 'rgba(62,240,163,0.1)' : 'rgba(255,207,92,0.1)'};border-color:${g.undetected ? 'rgba(62,240,163,0.35)' : 'rgba(255,207,92,0.35)'};">
+            <span class="st-dot" style="background:${sc};box-shadow:0 0 6px ${sc};"></span>${g.status}
+          </span>
+          <span class="st-modules">${g.modules} modules</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Tier cards
+  const tierCards = TIERS.map(t => {
+    const on = t.id === s.tier;
+    const popular = !!t.popular;
+    const features = t.features.map(f => `<div style="display:flex;align-items:flex-start;gap:9px;font-size:12.5px;line-height:1.4;color:#b6c7d4;"><span style="color:#3ef0a3;flex:none;">✓</span>${f}</div>`).join('');
+    return `
+      <div class="st-tier-card ${on ? 'active' : ''} ${popular ? 'popular' : ''}" data-tier="${t.id}"
+        style="background: ${on ? 'linear-gradient(180deg, rgba(0,212,255,0.12), rgba(12,16,22,0.9))' : popular ? 'linear-gradient(180deg, rgba(139,92,246,0.1), rgba(12,16,22,0.85))' : 'linear-gradient(180deg, rgba(16,22,30,0.72), rgba(9,12,17,0.8))'};
+               border-color: ${on ? 'rgba(0,212,255,0.6)' : popular ? 'rgba(139,92,246,0.45)' : 'rgba(0,212,255,0.14)'};
+               box-shadow: ${on ? '0 0 44px -14px rgba(0,212,255,0.6)' : popular ? '0 0 40px -18px rgba(139,92,246,0.5)' : 'none'};">
+        ${popular ? '<div class="st-popular-badge">MOST POPULAR</div>' : ''}
+        <div class="st-tier-label" style="color:${on ? '#00d4ff' : popular ? '#c4b5fd' : '#7f9bb0'};">${t.label}</div>
+        <div style="display:flex;align-items:baseline;gap:3px;margin-top:12px;">
+          <span style="font-size:16px;font-weight:600;color:#8aa0b2;">$</span>
+          <span class="st-tier-price">${game.prices[t.id]}</span>
+        </div>
+        <div class="st-tier-per">${t.per}</div>
+        <div class="st-divider"></div>
+        <div class="st-features">${features}</div>
+        <div class="st-tier-btn" style="color:${on ? '#03121a' : '#cdeefb'};background:${on ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)'};border:${on ? 'none' : '1px solid rgba(0,212,255,0.22)'};">${on ? 'SELECTED ✓' : 'SELECT PLAN'}</div>
+      </div>`;
+  }).join('');
+
+  // Trust icons
+  const trustIcons = TRUST.map(tr => `
+    <div class="st-trust-item">
+      <div class="st-trust-icon">${tr.icon}</div>
+      <div><div class="st-trust-title">${tr.title}</div><div class="st-trust-sub">${tr.sub}</div></div>
+    </div>
+  `).join('');
+
+  // Checkout bar
+  const co = s.checkout;
+  let barHtml = '';
+  if (s.tier) {
+    let checkoutLabel = 'CHECKOUT';
+    let checkoutBg = 'linear-gradient(180deg,#1ee0ff,#00a6cf)';
+    let checkoutColor = '#03121a';
+    let checkoutCursor = 'pointer';
+    let checkoutShadow = '0 8px 24px -8px rgba(0,212,255,0.55)';
+    let checkoutAnim = 'st-pulse 2.4s ease-in-out infinite';
+    let checkoutSpinning = false;
+    let barBorder = 'rgba(0,212,255,0.3)';
+    let barGlow = 'rgba(0,212,255,0.5)';
+    let barTop = tier.label + ' ACCESS · ' + game.status;
+    let barTitle = game.name;
+    let barPrice = '$' + game.prices[s.tier];
+
+    if (co === 'processing') {
+      checkoutLabel = 'PROCESSING';
+      checkoutCursor = 'wait';
+      checkoutAnim = 'none';
+      checkoutSpinning = true;
+    } else if (co === 'done') {
+      checkoutLabel = '✓ CONFIRMED';
+      checkoutBg = 'rgba(62,240,163,0.15)';
+      checkoutColor = '#3ef0a3';
+      checkoutShadow = '0 0 24px -6px rgba(62,240,163,0.6)';
+      checkoutAnim = 'none';
+      checkoutCursor = 'default';
+      barBorder = 'rgba(62,240,163,0.45)';
+      barGlow = 'rgba(62,240,163,0.5)';
+      barTop = 'ORDER CONFIRMED · LICENSE SENT TO YOUR INBOX';
+      barTitle = 'Activated';
+    }
+
+    const spinnerHtml = checkoutSpinning ? '<span class="st-spinner"></span>' : '';
+
+    barHtml = `
+      <div class="st-checkout-bar" style="border-color:${barBorder};box-shadow:0 18px 50px -14px rgba(0,0,0,0.85),0 0 40px -16px ${barGlow};animation:st-rise 0.25s ease both;">
+        <div style="min-width:0;flex:1;">
+          <div class="st-bar-top">${barTop}</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+            <span class="st-bar-title">${barTitle}</span>
+            <span class="st-bar-price" style="text-shadow:0 0 10px ${co === 'done' ? 'rgba(62,240,163,0.5)' : 'rgba(0,212,255,0.5)'}">${barPrice}</span>
+          </div>
+        </div>
+        <button class="st-checkout-btn" onclick="doCheckout()" style="cursor:${checkoutCursor};color:${checkoutColor};background:${checkoutBg};box-shadow:${checkoutShadow};animation:${checkoutAnim};">
+          ${spinnerHtml}${checkoutLabel}
+        </button>
+      </div>`;
+  }
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="st-container">
+      <div class="st-bg-grid"></div>
+      <div class="st-scanlines"></div>
+      <div class="st-glow"></div>
+
+      <div class="st-content">
+        <!-- TOP BAR -->
+        <div class="st-topbar">
+          <a href="/forum" class="st-toplink"><span class="st-back-arrow">‹</span> Discussion Board</a>
+          <a href="/profile" class="st-toplink">Profile</a>
+          <div class="st-logo-wrap">
+            <div class="st-logo-box">
+              <div class="st-logo-diamond"></div>
+            </div>
+            <div class="st-logo-text">AETHER</div>
+          </div>
+        </div>
+
+        <!-- HERO -->
+        <div class="st-hero">
+          <div class="st-hero-badge">
+            <span class="st-hero-dot"></span>INSTANT DELIVERY · ACTIVE NOW
+          </div>
+          <h1 class="st-hero-title">Get access in seconds</h1>
+          <p class="st-hero-sub">Pick a product, choose a plan, and your license is delivered the moment payment clears. HWID-locked, fully undetected, updated daily.</p>
+        </div>
+
+        <!-- GAME SELECTOR -->
+        <div class="st-game-grid" id="gameGrid">${gameCards}</div>
+
+        <!-- PRICING -->
+        <div class="st-tier-grid" id="tierGrid">${tierCards}</div>
+
+        <!-- TRUST ROW -->
+        <div class="st-trust-grid">${trustIcons}</div>
+
+        <div class="st-footer-text">SECURE CHECKOUT · VISA · MASTERCARD · CRYPTO · PAYPAL</div>
+      </div>
+
+      <!-- CHECKOUT BAR -->
+      ${barHtml}
+    </div>
+  `;
+
+  // Attach click handlers for game cards
+  document.querySelectorAll('.st-game-card').forEach(el => {
+    const id = el.dataset.game;
+    el.onclick = () => pickGame(id);
+  });
+
+  // Attach click handlers for tier cards
+  document.querySelectorAll('.st-tier-card').forEach(el => {
+    const id = el.dataset.tier;
+    el.onclick = () => pickTier(id);
+  });
+}
+
+// ── Inject dynamic styles ────────────────────────────────
+const style = document.createElement('style');
+style.textContent = `
+.st-container { position: relative; min-height: 100vh; background: radial-gradient(130% 80% at 50% -10%, #0d1622 0%, #0a0a0f 46%, #060709 100%); }
+.st-bg-grid { position: fixed; inset: 0; background-image: linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px); background-size: 44px 44px; -webkit-mask-image: radial-gradient(90% 70% at 50% 25%, #000 30%, transparent 100%); mask-image: radial-gradient(90% 70% at 50% 25%, #000 30%, transparent 100%); pointer-events: none; }
+.st-scanlines { position: fixed; inset: 0; background-image: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px); background-size: 100% 6px; animation: st-scan 0.5s steps(3) infinite; pointer-events: none; opacity: 0.5; }
+.st-glow { position: fixed; top: -160px; left: 50%; width: 760px; height: 380px; transform: translateX(-50%); background: radial-gradient(circle, rgba(0,212,255,0.14), transparent 70%); filter: blur(34px); pointer-events: none; }
+.st-content { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 20px 22px 130px; }
+
+/* Topbar */
+.st-topbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 26px; }
+.st-toplink { text-decoration: none; padding: 9px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #9fc6dc; border: 1px solid rgba(0,212,255,0.18); transition: all 0.15s; }
+.st-toplink:hover { border-color: rgba(0,212,255,0.45); color: #cdeefb; }
+.st-back-arrow { color: #00d4ff; font-size: 15px; margin-right: 4px; }
+.st-logo-wrap { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+.st-logo-box { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,212,255,0.5); border-radius: 8px; background: linear-gradient(145deg, rgba(0,212,255,0.16), rgba(0,212,255,0.02)); box-shadow: 0 0 14px -2px rgba(0,212,255,0.5); }
+.st-logo-diamond { width: 11px; height: 11px; background: #00d4ff; transform: rotate(45deg); border-radius: 2px; box-shadow: 0 0 9px #00d4ff; }
+.st-logo-text { font-size: 15px; font-weight: 700; letter-spacing: 2.5px; color: #eaf7ff; text-shadow: 0 0 12px rgba(0,212,255,0.5); }
+
+/* Hero */
+.st-hero { text-align: center; margin-bottom: 28px; }
+.st-hero-badge { display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: #3ef0a3; padding: 6px 13px; border: 1px solid rgba(62,240,163,0.3); border-radius: 999px; background: rgba(62,240,163,0.07); margin-bottom: 16px; }
+.st-hero-dot { width: 7px; height: 7px; border-radius: 50%; background: #3ef0a3; box-shadow: 0 0 8px #3ef0a3; animation: st-blink 2s infinite; }
+.st-hero-title { margin: 0; font-size: 38px; font-weight: 700; letter-spacing: 0.5px; color: #eaf7ff; text-shadow: 0 0 26px rgba(0,212,255,0.4); text-wrap: balance; }
+.st-hero-sub { margin: 12px auto 0; max-width: 520px; font-size: 15px; line-height: 1.6; color: #8aa0b2; }
+
+/* Game grid */
+.st-game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 30px; }
+.st-game-card { position: relative; padding: 18px; border-radius: 15px; cursor: pointer; transition: all 0.18s ease; border: 1px solid; }
+.st-game-card:hover { transform: translateY(-2px); border-color: rgba(0,212,255,0.4); }
+.st-icon { width: 44px; height: 44px; flex: none; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #03121a; }
+.st-game-name { font-size: 15px; font-weight: 700; color: #eaf7ff; letter-spacing: 0.5px; }
+.st-game-type { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b; margin-top: 3px; }
+.st-radio { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 2px solid #33424f; transition: all 0.18s; }
+.st-radio.active { border-color: #00d4ff; background: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.8); }
+.st-status { display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 1px; padding: 4px 9px; border-radius: 999px; border: 1px solid; }
+.st-dot { width: 6px; height: 6px; border-radius: 50%; }
+.st-modules { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b; }
+
+/* Tier grid */
+.st-tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; align-items: stretch; }
+.st-tier-card { position: relative; display: flex; flex-direction: column; padding: 22px 20px; border-radius: 16px; cursor: pointer; transition: all 0.18s ease; border: 1px solid; }
+.st-tier-card:hover { transform: translateY(-2px); border-color: rgba(0,212,255,0.4); }
+.st-popular-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: #0c0a18; padding: 4px 12px; border-radius: 999px; background: linear-gradient(90deg, #c4b5fd, #00d4ff); white-space: nowrap; box-shadow: 0 4px 14px -4px rgba(139,92,246,0.7); }
+.st-tier-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; }
+.st-tier-price { font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 700; color: #eaf7ff; line-height: 1; }
+.st-tier-per { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b; margin-top: 6px; }
+.st-divider { height: 1px; margin: 16px 0; background: linear-gradient(90deg, transparent, rgba(0,212,255,0.2), transparent); }
+.st-features { display: flex; flex-direction: column; gap: 9px; flex: 1; }
+.st-tier-btn { margin-top: 18px; text-align: center; padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 700; letter-spacing: 1px; cursor: pointer; transition: all 0.15s; }
+.st-tier-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+/* Trust */
+.st-trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 26px; }
+.st-trust-item { display: flex; align-items: center; gap: 12px; padding: 15px 16px; border-radius: 13px; background: linear-gradient(180deg, rgba(16,22,30,0.6), rgba(10,13,18,0.6)); border: 1px solid rgba(0,212,255,0.12); }
+.st-trust-icon { width: 36px; height: 36px; flex: none; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #00d4ff; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); }
+.st-trust-title { font-size: 13px; font-weight: 600; color: #dbe8f2; }
+.st-trust-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b; margin-top: 2px; }
+
+/* Footer */
+.st-footer-text { text-align: center; margin-top: 22px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: #3c4e5e; }
+
+/* Checkout bar */
+.st-checkout-bar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; flex-wrap: wrap; gap: 14px 18px; width: calc(100% - 32px); max-width: 720px; padding: 14px 18px; border-radius: 15px; background: linear-gradient(180deg, rgba(20,27,37,0.95), rgba(11,15,21,0.97)); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid; pointer-events: auto; }
+.st-bar-top { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #4f6478; }
+.st-bar-title { font-size: 16px; font-weight: 700; color: #eaf7ff; white-space: nowrap; }
+.st-bar-price { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: #00d4ff; }
+.st-checkout-btn { display: flex; align-items: center; justify-content: center; gap: 9px; min-width: 180px; padding: 14px 24px; border-radius: 11px; border: none; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 1.5px; transition: all 0.15s; }
+.st-checkout-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.st-spinner { width: 14px; height: 14px; border: 2px solid rgba(3,18,26,0.35); border-top-color: #03121a; border-radius: 50%; display: inline-block; animation: st-spin 0.6s linear infinite; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .st-hero-title { font-size: 28px; }
+  .st-content { padding-left: 16px; padding-right: 16px; }
+  .st-tier-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .st-hero-title { font-size: 24px; }
+  .st-game-grid { grid-template-columns: 1fr; }
+  .st-tier-grid { grid-template-columns: 1fr; }
+  .st-checkout-btn { min-width: 140px; padding: 12px 18px; font-size: 13px; }
+  .st-topbar { gap: 8px; }
+}
+`;
+document.head.appendChild(style);
+
+// ── Initial render ───────────────────────────────────────
+render();
+</script>
+</body>
+</html>

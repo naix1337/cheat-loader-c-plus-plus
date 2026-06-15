@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; }
+  @keyframes ct-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes ct-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.25; } }
+  @keyframes ct-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; font-family: 'Space Grotesk', system-ui, sans-serif; background: radial-gradient(130% 80% at 50% -10%, #0d1622 0%, #0a0a0f 46%, #060709 100%); color: #c7d6e2;">
+
+  <div style="position: fixed; inset: 0; background-image: linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px); background-size: 44px 44px; -webkit-mask-image: radial-gradient(90% 70% at 50% 30%, #000 30%, transparent 100%); mask-image: radial-gradient(90% 70% at 50% 30%, #000 30%, transparent 100%); pointer-events: none;"></div>
+  <div style="position: fixed; inset: 0; background-image: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px); background-size: 100% 6px; animation: ct-scan 0.5s steps(3) infinite; pointer-events: none; opacity: 0.5;"></div>
+  <div style="position: fixed; top: -160px; left: 50%; width: 720px; height: 360px; transform: translateX(-50%); background: radial-gradient(circle, rgba(0,212,255,0.13), transparent 70%); filter: blur(30px); pointer-events: none;"></div>
+
+  <div style="position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 20px 22px 64px;">
+
+    <!-- TOP BAR -->
+    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 18px;">
+      <a href="Cheat Forum.dc.html" style="display: flex; align-items: center; gap: 9px; text-decoration: none; padding: 9px 14px; border-radius: 10px; background: rgba(16,22,30,0.7); border: 1px solid rgba(0,212,255,0.18); color: #9fc6dc; font-size: 13px; font-weight: 600;" style-hover="{{ linkHover }}">
+        <span style="color: #00d4ff; font-size: 15px;">‹</span> Discussion Board
+      </a>
+      <div style="display: flex; align-items: center; gap: 9px; margin-left: auto;">
+        <div style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,212,255,0.5); border-radius: 8px; background: linear-gradient(145deg, rgba(0,212,255,0.16), rgba(0,212,255,0.02)); box-shadow: 0 0 14px -2px rgba(0,212,255,0.5);">
+          <div style="width: 11px; height: 11px; background: #00d4ff; transform: rotate(45deg); border-radius: 2px; box-shadow: 0 0 9px #00d4ff;"></div>
+        </div>
+        <div style="font-size: 15px; font-weight: 700; letter-spacing: 2.5px; color: #eaf7ff; text-shadow: 0 0 12px rgba(0,212,255,0.5);">AETHER</div>
+      </div>
+    </div>
+
+    <!-- THREAD HEADER -->
+    <div style="margin-bottom: 16px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #4f6478; margin-bottom: 9px;">/ board / releases</div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px;">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 3px 8px; border-radius: 5px; color: #00d4ff; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.35);">PINNED</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 3px 8px; border-radius: 5px; color: #b39dff; background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.4);">UPDATE</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 3px 8px; border-radius: 5px; color: #ff8b6b; background: rgba(255,139,107,0.12); border: 1px solid rgba(255,139,107,0.4);">HOT</span>
+      </div>
+      <h1 style="margin: 0; font-size: 27px; line-height: 1.2; font-weight: 700; letter-spacing: 0.3px; color: #eaf7ff; text-shadow: 0 0 18px rgba(0,212,255,0.3); text-wrap: balance;">v2.4.1 changelog — smoothing rework &amp; undetected status</h1>
+      <div style="margin-top: 10px; display: flex; gap: 16px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #54697b;">
+        <span>started by <span style="color: #b39dff;">kernel_d</span></span>
+        <span>· 6h ago</span>
+        <span>· 42.1k views</span>
+        <span>· {{ replyCount }} replies</span>
+      </div>
+    </div>
+
+    <!-- OP POST -->
+    <div style="border-radius: 16px; overflow: hidden; background: linear-gradient(180deg, rgba(0,212,255,0.06), rgba(12,16,22,0.85)); border: 1px solid rgba(0,212,255,0.3); box-shadow: 0 0 50px -18px rgba(0,212,255,0.5); margin-bottom: 22px;">
+      <!-- post header -->
+      <div style="display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid rgba(0,212,255,0.12);">
+        <div style="width: 44px; height: 44px; flex: none; border-radius: 12px; background: linear-gradient(145deg, #b39dff, #6d4fd6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; color: #0c0a18; box-shadow: 0 0 16px -4px rgba(139,92,246,0.7);">K</div>
+        <div style="min-width: 0; flex: 1;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 15px; font-weight: 700; color: #eaf7ff;">kernel_d</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #b39dff; padding: 2px 8px; border: 1px solid rgba(139,92,246,0.4); border-radius: 999px; background: rgba(139,92,246,0.1);">STAFF</span>
+          </div>
+          <div style="margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #54697b;">2,940 posts · joined 2019 · author</div>
+        </div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #44586a; text-align: right;">#1 · 6h ago</div>
+      </div>
+
+      <!-- post body -->
+      <div style="padding: 20px 22px; font-size: 14.5px; line-height: 1.72; color: #c2d2df;">
+        <p style="margin: 0 0 14px;">Rolled out <strong style="color: #eaf7ff;">v2.4.1</strong> across all regions. The big one this cycle is the smoothing pipeline — it now interpolates per-frame instead of per-tick, so tracking reads way more human on replays. Full notes below.</p>
+
+        <div style="margin: 0 0 16px; padding: 12px 14px; border-radius: 11px; background: rgba(62,240,163,0.07); border: 1px solid rgba(62,240,163,0.3); display: flex; align-items: center; gap: 11px;">
+          <span style="width: 9px; height: 9px; border-radius: 50%; background: #3ef0a3; box-shadow: 0 0 10px #3ef0a3; animation: ct-blink 2s infinite; flex: none;"></span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8df0c4;"><strong style="color: #3ef0a3;">STATUS: UNDETECTED</strong> · last checked 2h ago · edge-07</span>
+        </div>
+
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: #4f6478; margin-bottom: 9px;">CHANGES</div>
+        <ul style="margin: 0 0 16px; padding-left: 4px; list-style: none;">
+          <li style="display: flex; gap: 10px; margin-bottom: 8px;"><span style="color: #00d4ff;">+</span><span>Reworked aim smoothing — per-frame interpolation, new <code style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #9fe6ff; background: rgba(0,212,255,0.08); padding: 1px 6px; border-radius: 5px;">smoothing</code> curve options</span></li>
+          <li style="display: flex; gap: 10px; margin-bottom: 8px;"><span style="color: #00d4ff;">+</span><span>Per-bone ESP toggles added to the visuals module</span></li>
+          <li style="display: flex; gap: 10px; margin-bottom: 8px;"><span style="color: #ffcf5c;">~</span><span>Lowered injection footprint by ~18% — faster <code style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #9fe6ff; background: rgba(0,212,255,0.08); padding: 1px 6px; border-radius: 5px;">INJECTING</code> phase</span></li>
+          <li style="display: flex; gap: 10px; margin-bottom: 0;"><span style="color: #ff8b6b;">−</span><span>Removed the legacy triggerbot (replaced by the new reaction engine)</span></li>
+        </ul>
+
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: #4f6478; margin-bottom: 9px;">RECOMMENDED CONFIG</div>
+        <pre style="margin: 0 0 16px; padding: 14px 16px; border-radius: 11px; background: rgba(2,6,10,0.85); border: 1px solid rgba(0,212,255,0.16); overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.7; color: #9fc6dc;"><span style="color: #b39dff;">[aim]</span>
+smoothing   = <span style="color: #3ef0a3;">1.85</span>
+fov         = <span style="color: #3ef0a3;">4.5</span>
+target_bone = <span style="color: #ffcf5c;">"neck"</span>
+<span style="color: #b39dff;">[visuals]</span>
+esp         = <span style="color: #3ef0a3;">true</span>
+box_style   = <span style="color: #ffcf5c;">"corner"</span></pre>
+
+        <p style="margin: 0; color: #8aa0b2; font-size: 13.5px;">Update is mandatory — older builds will fail the license check. Drop questions below and I'll keep this thread updated with the live status.</p>
+      </div>
+
+      <!-- post footer -->
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 13px 18px; border-top: 1px solid rgba(0,212,255,0.1); background: rgba(2,6,10,0.3);">
+        <button onClick="{{ op.onLike }}" style="display: flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 9px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: {{ op.likeColor }}; background: {{ op.likeBg }}; border: 1px solid {{ op.likeBorder }};" style-hover="{{ softHover }}">▲ {{ op.likes }}</button>
+        <button onClick="{{ op.onQuote }}" style="padding: 7px 13px; border-radius: 9px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #8fb0c6; background: rgba(2,6,10,0.5); border: 1px solid rgba(0,212,255,0.14);" style-hover="{{ softHover }}">❝ Quote</button>
+        <button style="padding: 7px 13px; border-radius: 9px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #8fb0c6; background: rgba(2,6,10,0.5); border: 1px solid rgba(0,212,255,0.14);" style-hover="{{ softHover }}">↗ Share</button>
+        <button onClick="{{ op.onBookmark }}" style="margin-left: auto; padding: 7px 11px; border-radius: 9px; cursor: pointer; font-size: 14px; line-height: 1; color: {{ op.bookmarkColor }}; background: rgba(2,6,10,0.5); border: 1px solid rgba(0,212,255,0.14);">{{ op.bookmarkIcon }}</button>
+      </div>
+    </div>
+
+    <!-- REPLIES HEADER -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: #4f6478;">{{ replyCount }} REPLIES</div>
+      <button onClick="{{ onSort }}" style="background: transparent; border: none; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #00d4ff;">SORT · {{ sortLabel }}</button>
+    </div>
+
+    <!-- REPLIES -->
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <sc-for list="{{ replies }}" as="r" hint-placeholder-count="4">
+        <div style="border-radius: 14px; overflow: hidden; background: {{ r.cardBg }}; border: 1px solid {{ r.cardBorder }}; box-shadow: 0 14px 40px -28px rgba(0,0,0,0.9); animation: {{ r.anim }};">
+          <div style="display: flex; align-items: center; gap: 11px; padding: 13px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <div style="width: 38px; height: 38px; flex: none; border-radius: 10px; background: {{ r.avatarBg }}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #03121a;">{{ r.initial }}</div>
+            <div style="min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 14px; font-weight: 700; color: #eaf7ff;">{{ r.author }}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1px; color: {{ r.rankColor }}; padding: 2px 7px; border: 1px solid {{ r.rankBorder }}; border-radius: 999px; background: {{ r.rankBg }};">{{ r.rank }}</span>
+                <sc-if value="{{ r.badge }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 1px; color: #3ef0a3; padding: 2px 7px; border: 1px solid rgba(62,240,163,0.4); border-radius: 999px; background: rgba(62,240,163,0.1);">{{ r.badge }}</span>
+                </sc-if>
+              </div>
+            </div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #44586a; text-align: right;">{{ r.num }} · {{ r.time }}</div>
+          </div>
+
+          <div style="padding: 15px 18px; font-size: 14px; line-height: 1.66; color: #bccdda;">
+            <sc-if value="{{ r.quote }}" hint-placeholder-val="{{ false }}">
+              <div style="margin: 0 0 11px; padding: 9px 13px; border-left: 3px solid rgba(0,212,255,0.5); border-radius: 0 9px 9px 0; background: rgba(0,212,255,0.05);">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #00d4ff; margin-bottom: 4px;">{{ r.quoteAuthor }} wrote:</div>
+                <div style="font-size: 12.5px; color: #7f97a8; font-style: italic;">{{ r.quote }}</div>
+              </div>
+            </sc-if>
+            <div style="white-space: pre-wrap;">{{ r.body }}</div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; padding: 11px 16px; border-top: 1px solid rgba(255,255,255,0.04); background: rgba(2,6,10,0.25);">
+            <button onClick="{{ r.onLike }}" style="display: flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 8px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: {{ r.likeColor }}; background: {{ r.likeBg }}; border: 1px solid {{ r.likeBorder }};" style-hover="{{ softHover }}">▲ {{ r.likes }}</button>
+            <button onClick="{{ r.onQuote }}" style="padding: 6px 11px; border-radius: 8px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #8fb0c6; background: rgba(2,6,10,0.5); border: 1px solid rgba(0,212,255,0.14);" style-hover="{{ softHover }}">❝ Quote</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- REPLY COMPOSER -->
+    <div style="margin-top: 22px; border-radius: 16px; background: linear-gradient(180deg, rgba(18,24,33,0.85), rgba(10,13,18,0.9)); border: 1px solid rgba(0,212,255,0.28); box-shadow: 0 0 44px -16px rgba(0,212,255,0.45); overflow: hidden;">
+      <div style="display: flex; align-items: center; gap: 11px; padding: 14px 18px; border-bottom: 1px solid rgba(0,212,255,0.12);">
+        <div style="position: relative; width: 36px; height: 36px; flex: none; border-radius: 10px; background: linear-gradient(145deg, #1ee0ff, #0a7fa6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #03121a;">N
+          <span style="position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border-radius: 50%; background: #3ef0a3; border: 2px solid #0c1017;"></span>
+        </div>
+        <div style="line-height: 1.2;">
+          <div style="font-size: 13px; font-weight: 700; color: #eaf7ff;">n0vakill</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; color: #00d4ff;">reply as PREMIUM</div>
+        </div>
+      </div>
+      <div style="padding: 14px 18px;">
+        <textarea value="{{ draft }}" onInput="{{ onDraft }}" ref="{{ draftRef }}" placeholder="Add to the discussion… markdown &amp; quotes supported" style="width: 100%; min-height: 96px; resize: vertical; padding: 12px 14px; border-radius: 11px; background: rgba(2,6,10,0.6); border: 1px solid rgba(0,212,255,0.18); outline: none; color: #d6e6f2; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6;"></textarea>
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 6px;">
+            <sc-for list="{{ toolbar }}" as="tb" hint-placeholder-count="4">
+              <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #7f9bb0; background: rgba(2,6,10,0.5); border: 1px solid rgba(0,212,255,0.14);" style-hover="{{ softHover }}">{{ tb }}</div>
+            </sc-for>
+          </div>
+          <button onClick="{{ onReply }}" style="margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 11px 22px; border-radius: 10px; border: none; white-space: nowrap; cursor: {{ replyCursor }}; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; color: {{ replyColor }}; background: {{ replyBg }}; box-shadow: {{ replyShadow }};" style-hover="{{ btnHover }}">POST REPLY</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  PALETTE = {
+    cyan:   'linear-gradient(145deg,#1ee0ff,#0a7fa6)',
+    purple: 'linear-gradient(145deg,#b39dff,#6d4fd6)',
+    green:  'linear-gradient(145deg,#3ef0a3,#1f9e72)',
+    gold:   'linear-gradient(145deg,#ffcf5c,#d49a17)',
+    red:    'linear-gradient(145deg,#ff8b8b,#c74f4f)',
+    blue:   'linear-gradient(145deg,#7fd0ff,#3a86c7)',
+  };
+  RANK = {
+    OWNER:   { color: '#ffcf5c', bg: 'rgba(255,207,92,0.1)',  border: 'rgba(255,207,92,0.4)' },
+    STAFF:   { color: '#b39dff', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.4)' },
+    PREMIUM: { color: '#00d4ff', bg: 'rgba(0,212,255,0.1)',   border: 'rgba(0,212,255,0.35)' },
+    MEMBER:  { color: '#7f9bb0', bg: 'rgba(127,155,176,0.1)', border: 'rgba(127,155,176,0.3)' },
+  };
+
+  baseReplies = [
+    { id: 1, author: 'gh0st', rank: 'PREMIUM', av: 'red', time: '5h ago', likes: 42,
+      body: 'Smoothing finally feels natural — replays look completely legit now. Any ETA on a config import button so we can share presets?' },
+    { id: 2, author: 'mara.exe', rank: 'PREMIUM', av: 'green', time: '4h ago', likes: 88, badge: 'HELPFUL',
+      quoteAuthor: 'kernel_d', quote: 'Full notes below… the big one this cycle is the smoothing pipeline.',
+      body: 'Confirmed clean after a 3h session on my main account. Zero flags, no review queue. The lower injection footprint is noticeable too — loader hits READY way faster.' },
+    { id: 3, author: 'newguy22', rank: 'MEMBER', av: 'blue', time: '2h ago', likes: 3,
+      body: "Updated and now my loader hangs forever at CHECKING LICENSE. Anyone else? It worked fine on 2.4.0." },
+    { id: 4, author: 'kernel_d', rank: 'STAFF', av: 'purple', time: '1h ago', likes: 64, badge: 'SOLUTION', staff: true,
+      quoteAuthor: 'newguy22', quote: 'now my loader hangs forever at CHECKING LICENSE',
+      body: "Known on first launch after the update. Clear %localappdata%\\aether\\cache and relaunch as admin — it re-pulls the new manifest. Fixed it for everyone who's reported back. Marking this as the solution." },
+    { id: 5, author: 'syn', rank: 'MEMBER', av: 'gold', time: '38m ago', likes: 12,
+      body: 'running great here, 0 issues. per-bone ESP toggles are a huge upgrade.' },
+  ];
+
+  state = {
+    sort: 'oldest', // oldest | top
+    likes: {},      // postKey -> liked bool
+    extra: [],      // appended replies
+    draft: '',
+    opLiked: false,
+    opMarked: true,
+  };
+
+  componentDidMount() { this.uid = 500; }
+
+  toggleSort = () => this.setState(s => ({ sort: s.sort === 'oldest' ? 'top' : 'oldest' }));
+  onDraft = (e) => this.setState({ draft: e.target.value });
+
+  likeKey = (k) => this.setState(s => ({ likes: { ...s.likes, [k]: !s.likes[k] } }));
+
+  quoteInto = (author, snippet) => {
+    const block = '> ' + author + ' wrote: ' + snippet + '\n\n';
+    this.setState(s => ({ draft: (s.draft ? s.draft + '\n' : '') + block }));
+    if (this.draftEl) { this.draftEl.focus(); }
+  };
+
+  postReply = () => {
+    const txt = this.state.draft.trim();
+    if (!txt) return;
+    const r = { id: ++this.uid, author: 'n0vakill', rank: 'PREMIUM', av: 'cyan', time: 'just now', likes: 0, body: txt, fresh: true };
+    this.setState(s => ({ extra: [...s.extra, r], draft: '' }));
+  };
+
+  renderVals() {
+    const s = this.state;
+    const allReplies = [...this.baseReplies, ...s.extra];
+    let ordered = [...allReplies];
+    if (s.sort === 'top') ordered.sort((a, b) => (b.likes + (s.likes['r' + b.id] ? 1 : 0)) - (a.likes + (s.likes['r' + a.id] ? 1 : 0)));
+
+    const mkLike = (key, base) => {
+      const on = !!s.likes[key];
+      return {
+        likes: base + (on ? 1 : 0),
+        likeColor: on ? '#03121a' : '#9fc6dc',
+        likeBg: on ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)',
+        likeBorder: on ? 'transparent' : 'rgba(0,212,255,0.16)',
+        onLike: () => this.likeKey(key),
+      };
+    };
+
+    const replies = ordered.map((r, i) => {
+      const rk = this.RANK[r.rank] || this.RANK.MEMBER;
+      const lk = mkLike('r' + r.id, r.likes);
+      return {
+        author: r.author, rank: r.rank, rankColor: rk.color, rankBg: rk.bg, rankBorder: rk.border,
+        initial: r.author[0].toUpperCase(), avatarBg: this.PALETTE[r.av] || this.PALETTE.blue,
+        time: r.time, num: '#' + (i + 2), body: r.body,
+        quote: r.quote || false, quoteAuthor: r.quoteAuthor || '',
+        badge: r.badge || false,
+        cardBg: r.staff ? 'linear-gradient(180deg, rgba(139,92,246,0.08), rgba(12,16,22,0.85))'
+                        : 'linear-gradient(180deg, rgba(16,22,30,0.72), rgba(9,12,17,0.8))',
+        cardBorder: r.staff ? 'rgba(139,92,246,0.4)' : 'rgba(0,212,255,0.14)',
+        anim: r.fresh ? 'ct-rise 0.3s ease both' : 'none',
+        onQuote: () => this.quoteInto(r.author, '"' + (r.body.length > 70 ? r.body.slice(0, 70) + '…' : r.body) + '"'),
+        ...lk,
+      };
+    });
+
+    const opLike = (() => {
+      const on = s.opLiked;
+      return {
+        likes: 318 + (on ? 1 : 0),
+        likeColor: on ? '#03121a' : '#9fc6dc',
+        likeBg: on ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)',
+        likeBorder: on ? 'transparent' : 'rgba(0,212,255,0.16)',
+        onLike: () => this.setState(st => ({ opLiked: !st.opLiked })),
+        onQuote: () => this.quoteInto('kernel_d', '"v2.4.1 changelog — smoothing rework"'),
+        onBookmark: () => this.setState(st => ({ opMarked: !st.opMarked })),
+        bookmarkIcon: s.opMarked ? '★' : '☆',
+        bookmarkColor: s.opMarked ? '#ffcf5c' : '#3c4e5e',
+      };
+    })();
+
+    const canReply = s.draft.trim().length > 0;
+
+    return {
+      op: opLike,
+      replies,
+      replyCount: allReplies.length,
+      sortLabel: s.sort === 'oldest' ? 'OLDEST' : 'TOP',
+      onSort: this.toggleSort,
+      draft: s.draft,
+      onDraft: this.onDraft,
+      draftRef: (el) => { this.draftEl = el; },
+      onReply: this.postReply,
+      replyBg: canReply ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)',
+      replyColor: canReply ? '#03121a' : '#3c4e5e',
+      replyCursor: canReply ? 'pointer' : 'not-allowed',
+      replyShadow: canReply ? '0 8px 24px -8px rgba(0,212,255,0.55)' : 'none',
+      toolbar: ['B', 'i', '<>', '❝'],
+      linkHover: { borderColor: 'rgba(0,212,255,0.45)', color: '#cdeefb' },
+      softHover: { borderColor: 'rgba(0,212,255,0.4)', color: '#cdeefb' },
+      btnHover: { filter: 'brightness(1.08)', transform: 'translateY(-1px)' },
+    };
+  }
+}
+</script>
+</body>
+</html>

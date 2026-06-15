@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #06070b; }
+  @keyframes cf-scan { from { background-position: 0 0; } to { background-position: 0 6px; } }
+  @keyframes cf-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(0,212,255,0.5), 0 8px 24px -8px rgba(0,212,255,0.45); } 50% { box-shadow: 0 0 22px 1px rgba(0,212,255,0.6), 0 8px 30px -6px rgba(0,212,255,0.6); } }
+  @keyframes cf-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.25; } }
+  @keyframes cf-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.25); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; font-family: 'Space Grotesk', system-ui, sans-serif; background: radial-gradient(130% 80% at 50% -10%, #0d1622 0%, #0a0a0f 46%, #060709 100%); color: #c7d6e2;">
+
+  <!-- fixed bg layers -->
+  <div style="position: fixed; inset: 0; background-image: linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px); background-size: 44px 44px; -webkit-mask-image: radial-gradient(90% 70% at 50% 30%, #000 30%, transparent 100%); mask-image: radial-gradient(90% 70% at 50% 30%, #000 30%, transparent 100%); pointer-events: none;"></div>
+  <div style="position: fixed; inset: 0; background-image: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px); background-size: 100% 6px; animation: cf-scan 0.5s steps(3) infinite; pointer-events: none; opacity: 0.5;"></div>
+  <div style="position: fixed; top: -160px; left: 50%; width: 720px; height: 360px; transform: translateX(-50%); background: radial-gradient(circle, rgba(0,212,255,0.14), transparent 70%); filter: blur(30px); pointer-events: none;"></div>
+
+  <div style="position: relative; z-index: 1; max-width: 1160px; margin: 0 auto; padding: 20px 22px 60px;">
+
+    <!-- NAV -->
+    <nav style="display: flex; align-items: center; flex-wrap: wrap; gap: 14px 22px; padding: 14px 18px; border-radius: 16px; background: linear-gradient(180deg, rgba(18,24,33,0.82), rgba(10,13,18,0.85)); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(0,212,255,0.22); box-shadow: 0 0 50px -16px rgba(0,212,255,0.4), inset 0 1px 0 rgba(255,255,255,0.04);">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <div style="width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,212,255,0.5); border-radius: 9px; background: linear-gradient(145deg, rgba(0,212,255,0.16), rgba(0,212,255,0.02)); box-shadow: 0 0 16px -2px rgba(0,212,255,0.5), inset 0 0 10px rgba(0,212,255,0.18);">
+          <div style="width: 12px; height: 12px; background: #00d4ff; transform: rotate(45deg); border-radius: 2px; box-shadow: 0 0 10px #00d4ff;"></div>
+        </div>
+        <div style="font-size: 17px; font-weight: 700; letter-spacing: 3px; color: #eaf7ff; text-shadow: 0 0 12px rgba(0,212,255,0.5);">AETHER</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.5px; color: #8b5cf6; padding: 3px 7px; border: 1px solid rgba(139,92,246,0.4); border-radius: 6px;">FORUM</div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; flex-wrap: wrap;">
+        <sc-for list="{{ navLinks }}" as="nv" hint-placeholder-count="4">
+          <a href="#" style="padding: 7px 12px; border-radius: 8px; text-decoration: none; letter-spacing: 0.5px; color: {{ nv.color }}; background: {{ nv.bg }};" style-hover="{{ navHover }}">{{ nv.label }}</a>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 9px; background: rgba(2,6,10,0.6); border: 1px solid rgba(0,212,255,0.16); min-width: 180px;">
+          <span style="color: #4f6478; font-size: 13px;">⌕</span>
+          <input value="{{ query }}" onInput="{{ onSearch }}" placeholder="search threads…" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #d6e6f2; font-family: 'JetBrains Mono', monospace; font-size: 12px;" />
+        </div>
+        <div style="display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 6px; border-radius: 999px; background: rgba(0,212,255,0.07); border: 1px solid rgba(0,212,255,0.22);">
+          <div style="position: relative; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(145deg, #1ee0ff, #0a7fa6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #03121a;">N
+            <span style="position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border-radius: 50%; background: #3ef0a3; border: 2px solid #0a0d12; box-shadow: 0 0 8px #3ef0a3;"></span>
+          </div>
+          <div style="line-height: 1.15;">
+            <div style="font-size: 12px; font-weight: 600; color: #e8f4ff;">n0vakill</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; color: #00d4ff;">PREMIUM</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- STATS STRIP -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px;">
+      <sc-for list="{{ stats }}" as="st" hint-placeholder-count="4">
+        <div style="padding: 14px 16px; border-radius: 13px; background: linear-gradient(180deg, rgba(16,22,30,0.7), rgba(10,13,18,0.7)); border: 1px solid rgba(0,212,255,0.14); display: flex; align-items: center; gap: 12px;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: {{ st.dot }}; box-shadow: 0 0 10px {{ st.dot }}; flex: none;"></div>
+          <div style="min-width: 0;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: #e8f4ff; line-height: 1;">{{ st.value }}</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.5px; color: #4f6478; margin-top: 5px;">{{ st.label }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- BODY -->
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; margin-top: 18px; align-items: flex-start;">
+
+      <!-- MAIN -->
+      <main style="flex: 1 1 600px; min-width: 0;">
+
+        <!-- board header -->
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div style="min-width: 0;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #4f6478;">/ community / boards</div>
+            <h1 style="margin: 5px 0 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; color: #eaf7ff; text-shadow: 0 0 16px rgba(0,212,255,0.35);">Discussion Board</h1>
+          </div>
+          <button onClick="{{ onToggleComposer }}" style="margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 11px; border: none; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; white-space: nowrap; color: #03121a; background: linear-gradient(180deg, #1ee0ff, #00a6cf); box-shadow: 0 8px 24px -8px rgba(0,212,255,0.55); animation: cf-pulse 2.4s ease-in-out infinite; transition: transform 0.12s ease, filter 0.2s ease;" style-hover="{{ btnHover }}" style-active="{{ btnActive }}">
+            <span style="font-size: 16px; line-height: 0;">{{ composerIcon }}</span>{{ composerBtnLabel }}
+          </button>
+        </div>
+
+        <!-- composer -->
+        <sc-if value="{{ composerOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-bottom: 14px; padding: 16px; border-radius: 14px; background: linear-gradient(180deg, rgba(18,24,33,0.85), rgba(10,13,18,0.88)); border: 1px solid rgba(0,212,255,0.3); box-shadow: 0 0 40px -14px rgba(0,212,255,0.5); animation: cf-rise 0.25s ease both;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #00d4ff; margin-bottom: 10px;">› NEW THREAD</div>
+            <input value="{{ newTitle }}" onInput="{{ onTitleInput }}" placeholder="Thread title…" style="width: 100%; padding: 11px 13px; border-radius: 9px; background: rgba(2,6,10,0.6); border: 1px solid rgba(0,212,255,0.2); outline: none; color: #e8f4ff; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 10px;" />
+            <textarea value="{{ newBody }}" onInput="{{ onBodyInput }}" placeholder="Write something… markdown supported" style="width: 100%; min-height: 76px; resize: vertical; padding: 11px 13px; border-radius: 9px; background: rgba(2,6,10,0.6); border: 1px solid rgba(0,212,255,0.16); outline: none; color: #c7d6e2; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.5;"></textarea>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <sc-for list="{{ composerCats }}" as="cc" hint-placeholder-count="3">
+                  <button onClick="{{ cc.onPick }}" style="padding: 6px 11px; border-radius: 7px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: {{ cc.color }}; background: {{ cc.bg }}; border: 1px solid {{ cc.border }};">{{ cc.label }}</button>
+                </sc-for>
+              </div>
+              <button onClick="{{ onPost }}" style="margin-left: auto; padding: 10px 20px; border-radius: 9px; border: none; cursor: {{ postCursor }}; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1px; color: {{ postColor }}; background: {{ postBg }};" style-hover="{{ btnHover }}">POST</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- filter chips -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="5">
+            <button onClick="{{ f.onClick }}" style="display: flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 9px; cursor: pointer; white-space: nowrap; font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; font-weight: 600; letter-spacing: 0.3px; color: {{ f.color }}; background: {{ f.bg }}; border: 1px solid {{ f.border }}; transition: all 0.15s ease;" style-hover="{{ chipHover }}">{{ f.label }}<span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: {{ f.countColor }};">{{ f.count }}</span></button>
+          </sc-for>
+        </div>
+
+        <!-- thread list -->
+        <div style="border-radius: 16px; overflow: hidden; background: linear-gradient(180deg, rgba(16,22,30,0.72), rgba(9,12,17,0.78)); border: 1px solid rgba(0,212,255,0.16); box-shadow: 0 20px 60px -30px rgba(0,0,0,0.9);">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; border-bottom: 1px solid rgba(0,212,255,0.12); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #4f6478;">
+            <span>{{ resultLabel }}</span>
+            <button onClick="{{ onSort }}" style="background: transparent; border: none; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #00d4ff;">SORT · {{ sortLabel }}</button>
+          </div>
+
+          <sc-for list="{{ threads }}" as="t" hint-placeholder-count="6">
+            <div onClick="{{ t.onOpen }}" style="position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 15px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); background: {{ t.rowBg }}; cursor: pointer; transition: background 0.15s ease;" style-hover="{{ rowHover }}">
+              <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: {{ t.accent }};"></div>
+              <div style="width: 42px; height: 42px; flex: none; border-radius: 11px; background: {{ t.avatarBg }}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; color: #03121a; box-shadow: 0 4px 12px -4px rgba(0,0,0,0.6);">{{ t.avatarInitial }}</div>
+
+              <div style="flex: 1 1 240px; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <sc-for list="{{ t.tags }}" as="tag" hint-placeholder-count="0">
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 7px; border-radius: 5px; color: {{ tag.color }}; background: {{ tag.bg }}; border: 1px solid {{ tag.border }};">{{ tag.label }}</span>
+                  </sc-for>
+                  <span style="font-size: 15px; font-weight: 600; color: #e8f4ff;">{{ t.title }}</span>
+                </div>
+                <div style="margin-top: 5px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #54697b;">by <span style="color: {{ t.rankColor }};">{{ t.author }}</span> · {{ t.time }} · in {{ t.category }}</div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 18px; flex: none;">
+                <div style="text-align: center; min-width: 46px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #9fc6dc;">{{ t.replies }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1px; color: #44586a;">REPLIES</div>
+                </div>
+                <div style="text-align: center; min-width: 46px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #9fc6dc;">{{ t.views }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1px; color: #44586a;">VIEWS</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 130px;">
+                  <div style="width: 26px; height: 26px; flex: none; border-radius: 7px; background: {{ t.lastBg }}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 10px; color: #03121a;">{{ t.lastInitial }}</div>
+                  <div style="line-height: 1.2; min-width: 0;">
+                    <div style="font-size: 11.5px; color: #b8cad8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ t.lastUser }}</div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #44586a;">{{ t.lastTime }}</div>
+                  </div>
+                </div>
+                <button onClick="{{ t.onBookmark }}" style="background: transparent; border: none; cursor: pointer; font-size: 16px; line-height: 1; color: {{ t.bookmarkColor }}; padding: 4px;">{{ t.bookmarkIcon }}</button>
+              </div>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 40px 18px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #4f6478;">no threads match — try another filter or search</div>
+          </sc-if>
+        </div>
+
+        <!-- pagination -->
+        <div style="display: flex; justify-content: center; gap: 7px; margin-top: 16px;">
+          <sc-for list="{{ pages }}" as="p" hint-placeholder-count="5">
+            <div style="min-width: 34px; height: 34px; padding: 0 10px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{ p.color }}; background: {{ p.bg }}; border: 1px solid {{ p.border }}; cursor: pointer;">{{ p.label }}</div>
+          </sc-for>
+        </div>
+      </main>
+
+      <!-- SIDEBAR -->
+      <aside style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 16px;">
+
+        <!-- account -->
+        <div style="padding: 18px; border-radius: 15px; background: linear-gradient(180deg, rgba(0,212,255,0.08), rgba(10,13,18,0.85)); border: 1px solid rgba(0,212,255,0.28); box-shadow: 0 0 40px -16px rgba(0,212,255,0.45);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="position: relative; width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(145deg, #1ee0ff, #0a7fa6); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: #03121a; box-shadow: 0 0 18px -4px rgba(0,212,255,0.6);">N
+              <span style="position: absolute; right: -3px; bottom: -3px; width: 11px; height: 11px; border-radius: 50%; background: #3ef0a3; border: 2px solid #0a0d12; box-shadow: 0 0 8px #3ef0a3;"></span>
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: #eaf7ff;">n0vakill</div>
+              <div style="display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #00d4ff; padding: 2px 8px; border: 1px solid rgba(0,212,255,0.4); border-radius: 999px; background: rgba(0,212,255,0.08);">★ PREMIUM</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px;">
+            <div style="padding: 10px; border-radius: 9px; background: rgba(2,6,10,0.5); text-align: center;">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: #e8f4ff;">312</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1px; color: #4f6478; margin-top: 3px;">POSTS</div>
+            </div>
+            <div style="padding: 10px; border-radius: 9px; background: rgba(2,6,10,0.5); text-align: center;">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: #3ef0a3;">+1.4k</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1px; color: #4f6478; margin-top: 3px;">REP</div>
+            </div>
+          </div>
+          <div style="margin-top: 12px; padding: 10px 12px; border-radius: 9px; background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25); display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: #b39dff;">LICENSE</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #d6c9ff;">expires in 27d</span>
+          </div>
+        </div>
+
+        <!-- online now -->
+        <div style="padding: 18px; border-radius: 15px; background: linear-gradient(180deg, rgba(16,22,30,0.72), rgba(9,12,17,0.78)); border: 1px solid rgba(0,212,255,0.16);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #4f6478;">ONLINE NOW</div>
+            <div style="display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #3ef0a3;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #3ef0a3; box-shadow: 0 0 8px #3ef0a3; animation: cf-blink 2s infinite;"></span>1,284</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 11px;">
+            <sc-for list="{{ online }}" as="u" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="position: relative; width: 30px; height: 30px; flex: none; border-radius: 8px; background: {{ u.bg }}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: #03121a;">{{ u.initial }}
+                  <span style="position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; background: {{ u.statusColor }}; border: 2px solid #0c1017;"></span>
+                </div>
+                <div style="min-width: 0; flex: 1;">
+                  <div style="font-size: 12.5px; color: #cdddea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ u.name }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.5px; color: {{ u.rankColor }};">{{ u.rank }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- trending -->
+        <div style="padding: 18px; border-radius: 15px; background: linear-gradient(180deg, rgba(16,22,30,0.72), rgba(9,12,17,0.78)); border: 1px solid rgba(0,212,255,0.16);">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: #4f6478; margin-bottom: 14px;">TRENDING TAGS</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <sc-for list="{{ trending }}" as="tr" hint-placeholder-count="6">
+              <div style="display: flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.18); cursor: pointer;" style-hover="{{ chipHover }}">
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #9fc6dc;">#{{ tr.tag }}</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #44586a;">{{ tr.count }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  PALETTE = ['linear-gradient(145deg,#1ee0ff,#0a7fa6)','linear-gradient(145deg,#b39dff,#6d4fd6)','linear-gradient(145deg,#3ef0a3,#1f9e72)','linear-gradient(145deg,#ffcf5c,#d49a17)','linear-gradient(145deg,#ff8b8b,#c74f4f)','linear-gradient(145deg,#7fd0ff,#3a86c7)'];
+
+  RANKS = {
+    OWNER:   '#ffcf5c',
+    STAFF:   '#b39dff',
+    PREMIUM: '#00d4ff',
+    MEMBER:  '#7f9bb0',
+  };
+
+  TAGS = {
+    PINNED:  { color: '#00d4ff', bg: 'rgba(0,212,255,0.1)',  border: 'rgba(0,212,255,0.35)' },
+    HOT:     { color: '#ff8b6b', bg: 'rgba(255,139,107,0.12)', border: 'rgba(255,139,107,0.4)' },
+    UPDATE:  { color: '#b39dff', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.4)' },
+    SOLVED:  { color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.4)' },
+    LOCKED:  { color: '#7f9bb0', bg: 'rgba(127,155,176,0.1)', border: 'rgba(127,155,176,0.3)' },
+    NEW:     { color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.4)' },
+  };
+
+  baseThreads = [
+    { id: 1, title: 'Welcome to the community — read the rules first', cat: 'announcements', catLabel: 'Announcements', tags: ['PINNED','LOCKED'], author: 'voidstaff', rank: 'OWNER', av: 3, replies: 4, views: 89200, last: 'voidstaff', lastAv: 3, time: '3w ago', lastTime: '3w' },
+    { id: 2, title: 'v2.4.1 changelog — smoothing rework & undetected status', cat: 'releases', catLabel: 'Releases', tags: ['PINNED','UPDATE','HOT'], author: 'kernel_d', rank: 'STAFF', av: 1, replies: 318, views: 42100, last: 'gh0st', lastAv: 4, time: '6h ago', lastTime: '2m' },
+    { id: 3, title: 'New visuals module — per-bone ESP toggles', cat: 'releases', catLabel: 'Releases', tags: ['HOT'], author: 'mara.exe', rank: 'PREMIUM', av: 2, replies: 142, views: 18700, last: 'syn', lastAv: 5, time: '11h ago', lastTime: '14m' },
+    { id: 4, title: 'Current detection status — is it safe today?', cat: 'releases', catLabel: 'Status', tags: [], author: 'trace0', rank: 'MEMBER', av: 0, replies: 87, views: 31200, last: 'kernel_d', lastAv: 1, time: '1d ago', lastTime: '38m' },
+    { id: 5, title: 'Loader stuck at CHECKING LICENSE — here is the fix', cat: 'support', catLabel: 'Support', tags: ['SOLVED'], author: 'helpybot', rank: 'STAFF', av: 1, replies: 56, views: 12400, last: 'newguy22', lastAv: 0, time: '2d ago', lastTime: '1h' },
+    { id: 6, title: 'How do I rebind the menu open key?', cat: 'support', catLabel: 'Support', tags: [], author: 'newguy22', rank: 'MEMBER', av: 0, replies: 12, views: 2100, last: 'mara.exe', lastAv: 2, time: '1d ago', lastTime: '3h' },
+    { id: 7, title: 'HWID reset request — megathread', cat: 'support', catLabel: 'Support', tags: ['PINNED'], author: 'voidstaff', rank: 'OWNER', av: 3, replies: 904, views: 67300, last: 'd3xter', lastAv: 5, time: '5w ago', lastTime: '6m' },
+    { id: 8, title: 'Best legit-looking config for ranked grinding?', cat: 'offtopic', catLabel: 'Off-Topic', tags: [], author: 'gh0st', rank: 'PREMIUM', av: 4, replies: 231, views: 19800, last: 'trace0', lastAv: 0, time: '2d ago', lastTime: '22m' },
+    { id: 9, title: 'Show off your end-of-season stats screenshots', cat: 'offtopic', catLabel: 'Off-Topic', tags: ['HOT'], author: 'syn', rank: 'MEMBER', av: 5, replies: 410, views: 28900, last: 'mara.exe', lastAv: 2, time: '4d ago', lastTime: '51m' },
+    { id: 10, title: 'Reseller applications are now open', cat: 'announcements', catLabel: 'Announcements', tags: ['UPDATE'], author: 'voidstaff', rank: 'OWNER', av: 3, replies: 73, views: 15600, last: 'kernel_d', lastAv: 1, time: '1w ago', lastTime: '4h' },
+  ];
+
+  state = {
+    filter: 'all',
+    sort: 'recent', // recent | top
+    query: '',
+    composerOpen: false,
+    newTitle: '',
+    newBody: '',
+    newCat: 'offtopic',
+    bookmarks: { 2: true, 7: true },
+    extra: [],
+  };
+
+  componentDidMount() { this.uid = 1000; }
+
+  fmt(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '' + n; }
+
+  setFilter = (id) => this.setState({ filter: id });
+  toggleSort = () => this.setState(s => ({ sort: s.sort === 'recent' ? 'top' : 'recent' }));
+  onSearch = (e) => this.setState({ query: e.target.value });
+  toggleComposer = () => this.setState(s => ({ composerOpen: !s.composerOpen }));
+  toggleBookmark = (id) => this.setState(s => ({ bookmarks: { ...s.bookmarks, [id]: !s.bookmarks[id] } }));
+
+  post = () => {
+    const { newTitle, newBody, newCat, extra } = this.state;
+    if (!newTitle.trim()) return;
+    const catLabel = { announcements: 'Announcements', releases: 'Releases', support: 'Support', offtopic: 'Off-Topic' }[newCat];
+    const t = { id: ++this.uid, title: newTitle.trim(), cat: newCat, catLabel, tags: ['NEW'], author: 'n0vakill', rank: 'PREMIUM', av: 0, replies: 0, views: 1, last: 'n0vakill', lastAv: 0, time: 'just now', lastTime: 'now' };
+    this.setState({ extra: [t, ...extra], newTitle: '', newBody: '', composerOpen: false, filter: newCat });
+  };
+
+  allThreads() { return [...this.state.extra, ...this.baseThreads]; }
+
+  renderVals() {
+    const s = this.state;
+    const R = this.RANKS;
+    const avBg = (i) => this.PALETTE[i % this.PALETTE.length];
+
+    const counts = { all: 0, announcements: 0, releases: 0, support: 0, offtopic: 0 };
+    this.allThreads().forEach(t => { counts.all++; counts[t.cat]++; });
+
+    const filterDefs = [
+      { id: 'all', label: 'All' }, { id: 'announcements', label: 'Announcements' },
+      { id: 'releases', label: 'Releases' }, { id: 'support', label: 'Support' },
+      { id: 'offtopic', label: 'Off-Topic' },
+    ];
+    const filters = filterDefs.map(f => {
+      const active = s.filter === f.id;
+      return {
+        label: f.label, count: counts[f.id], onClick: () => this.setFilter(f.id),
+        color: active ? '#03121a' : '#9fb3c4',
+        bg: active ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)',
+        border: active ? 'transparent' : 'rgba(0,212,255,0.18)',
+        countColor: active ? 'rgba(3,18,26,0.65)' : '#4f6478',
+      };
+    });
+
+    const q = s.query.trim().toLowerCase();
+    let list = this.allThreads().filter(t =>
+      (s.filter === 'all' || t.cat === s.filter) &&
+      (!q || t.title.toLowerCase().includes(q) || t.author.toLowerCase().includes(q))
+    );
+    const pinned = list.filter(t => t.tags.includes('PINNED'));
+    const rest = list.filter(t => !t.tags.includes('PINNED'));
+    if (s.sort === 'top') rest.sort((a, b) => b.replies - a.replies);
+    list = [...pinned, ...rest];
+
+    const threads = list.map(t => {
+      const accent = t.tags.includes('PINNED') ? '#00d4ff' : t.tags.includes('HOT') ? '#ff8b6b' : 'transparent';
+      const marked = !!s.bookmarks[t.id];
+      return {
+        title: t.title,
+        tags: t.tags.map(tg => ({ label: tg, ...this.TAGS[tg] })),
+        author: t.author, rankColor: R[t.rank] || R.MEMBER,
+        time: t.time, category: t.catLabel,
+        avatarInitial: t.author[0].toUpperCase(), avatarBg: avBg(t.av),
+        replies: this.fmt(t.replies), views: this.fmt(t.views),
+        lastUser: t.last, lastInitial: t.last[0].toUpperCase(), lastBg: avBg(t.lastAv), lastTime: t.lastTime,
+        accent, rowBg: t.tags.includes('PINNED') ? 'rgba(0,212,255,0.03)' : 'transparent',
+        bookmarkIcon: marked ? '★' : '☆', bookmarkColor: marked ? '#ffcf5c' : '#3c4e5e',
+        onBookmark: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.toggleBookmark(t.id); },
+        onOpen: () => { window.location.href = 'Cheat Thread.dc.html'; },
+      };
+    });
+
+    const composerCats = [
+      { id: 'announcements', label: 'ANNOUNCE' }, { id: 'releases', label: 'RELEASES' },
+      { id: 'support', label: 'SUPPORT' }, { id: 'offtopic', label: 'OFF-TOPIC' },
+    ].map(c => {
+      const on = s.newCat === c.id;
+      return { label: c.label, onPick: () => this.setState({ newCat: c.id }),
+        color: on ? '#03121a' : '#7f9bb0',
+        bg: on ? '#00d4ff' : 'rgba(2,6,10,0.5)',
+        border: on ? 'transparent' : 'rgba(0,212,255,0.18)' };
+    });
+
+    const canPost = s.newTitle.trim().length > 0;
+    const online = [
+      { name: 'kernel_d', rank: 'STAFF', av: 1, status: '#3ef0a3' },
+      { name: 'gh0st', rank: 'PREMIUM', av: 4, status: '#3ef0a3' },
+      { name: 'mara.exe', rank: 'PREMIUM', av: 2, status: '#3ef0a3' },
+      { name: 'd3xter', rank: 'MEMBER', av: 5, status: '#ffcf5c' },
+      { name: 'syn', rank: 'MEMBER', av: 5, status: '#3ef0a3' },
+      { name: 'trace0', rank: 'MEMBER', av: 0, status: '#ffcf5c' },
+    ].map(u => ({ name: u.name, rank: u.rank, rankColor: R[u.rank], initial: u.name[0].toUpperCase(), bg: avBg(u.av), statusColor: u.status }));
+
+    const pages = [
+      { label: '‹' }, { label: '1', on: true }, { label: '2' }, { label: '3' }, { label: '…' }, { label: '47' }, { label: '›' },
+    ].map(p => ({
+      label: p.label,
+      color: p.on ? '#03121a' : '#9fb3c4',
+      bg: p.on ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)',
+      border: p.on ? 'transparent' : 'rgba(0,212,255,0.16)',
+    }));
+
+    const navLinks = [
+      { label: 'Forum', on: true }, { label: 'Status', on: false }, { label: 'Store', on: false }, { label: 'Downloads', on: false }, { label: 'Discord', on: false },
+    ].map(n => ({ label: n.label, color: n.on ? '#00d4ff' : '#9fb3c4', bg: n.on ? 'rgba(0,212,255,0.1)' : 'transparent' }));
+
+    return {
+      navLinks,
+      query: s.query, onSearch: this.onSearch,
+      stats: [
+        { value: '1,284', label: 'ONLINE NOW', dot: '#3ef0a3' },
+        { value: '38.2k', label: 'THREADS', dot: '#00d4ff' },
+        { value: '1.1M', label: 'POSTS', dot: '#00d4ff' },
+        { value: 'd3xter', label: 'NEWEST MEMBER', dot: '#8b5cf6' },
+      ],
+      filters,
+      threads,
+      isEmpty: threads.length === 0,
+      resultLabel: threads.length + ' thread' + (threads.length === 1 ? '' : 's'),
+      sortLabel: s.sort === 'recent' ? 'RECENT' : 'TOP',
+      onSort: this.toggleSort,
+      composerOpen: s.composerOpen,
+      onToggleComposer: this.toggleComposer,
+      composerBtnLabel: s.composerOpen ? 'CLOSE' : 'NEW THREAD',
+      composerIcon: s.composerOpen ? '×' : '+',
+      newTitle: s.newTitle, newBody: s.newBody,
+      onTitleInput: (e) => this.setState({ newTitle: e.target.value }),
+      onBodyInput: (e) => this.setState({ newBody: e.target.value }),
+      composerCats, onPost: this.post,
+      postBg: canPost ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(2,6,10,0.5)',
+      postColor: canPost ? '#03121a' : '#3c4e5e',
+      postCursor: canPost ? 'pointer' : 'not-allowed',
+      online, pages,
+      trending: [
+        { tag: 'undetected', count: '412' }, { tag: 'cs2', count: '388' }, { tag: 'config', count: '256' },
+        { tag: 'hwid', count: '190' }, { tag: 'esp', count: '174' }, { tag: 'changelog', count: '141' },
+      ],
+      navHover: { background: 'rgba(0,212,255,0.08)', color: '#cdeefb' },
+      btnHover: { filter: 'brightness(1.08)', transform: 'translateY(-1px)' },
+      btnActive: { transform: 'translateY(1px) scale(0.99)' },
+      chipHover: { borderColor: 'rgba(0,212,255,0.45)', color: '#cdeefb' },
+      rowHover: { background: 'rgba(0,212,255,0.05)' },
+    };
+  }
+}
+</script>
+</body>
+</html>
