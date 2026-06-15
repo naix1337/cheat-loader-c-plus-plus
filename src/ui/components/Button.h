@@ -30,15 +30,16 @@ inline void drawSpinner(float radius, float thickness, ImVec4 color) {
     ImGui::Dummy(ImVec2(radius * 2.0f, radius * 2.0f));
 }
 
+/// Primary accent button (cyan)
 inline bool button(const char* label, bool loading = false, bool disabled = false,
                    ImVec2 size = ImVec2(0, 0)) {
     if (loading || disabled) {
         ImGui::BeginDisabled();
     }
 
-    ImGui::PushStyleColor(ImGuiCol_Button, theme::withAlpha(theme::kAccent, 0.35f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, theme::withAlpha(theme::kAccent, 0.55f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, theme::withAlpha(theme::kAccent, 0.75f));
+    ImGui::PushStyleColor(ImGuiCol_Button, theme::withAlpha(theme::kAccent, 0.25f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, theme::withAlpha(theme::kAccent, 0.45f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, theme::withAlpha(theme::kAccent, 0.7f));
 
     const bool clicked = ImGui::Button(label, size);
 
@@ -47,6 +48,33 @@ inline bool button(const char* label, bool loading = false, bool disabled = fals
     if (loading) {
         ImGui::SameLine();
         drawSpinner(8.0f, 2.0f, theme::kAccent);
+    }
+
+    if (loading || disabled) {
+        ImGui::EndDisabled();
+    }
+
+    return clicked && !loading && !disabled;
+}
+
+/// Purple accent button (for admin/premium actions)
+inline bool buttonPurple(const char* label, bool loading = false, bool disabled = false,
+                         ImVec2 size = ImVec2(0, 0)) {
+    if (loading || disabled) {
+        ImGui::BeginDisabled();
+    }
+
+    ImGui::PushStyleColor(ImGuiCol_Button, theme::withAlpha(theme::kPurple, 0.25f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, theme::withAlpha(theme::kPurple, 0.45f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, theme::withAlpha(theme::kPurple, 0.7f));
+
+    const bool clicked = ImGui::Button(label, size);
+
+    ImGui::PopStyleColor(3);
+
+    if (loading) {
+        ImGui::SameLine();
+        drawSpinner(8.0f, 2.0f, theme::kPurple);
     }
 
     if (loading || disabled) {
