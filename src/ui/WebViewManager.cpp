@@ -104,28 +104,27 @@ void WebViewManager::navigate(const std::wstring& url) {
 void WebViewManager::navigateToLocal(const std::string& page_name) {
     // SECURITY: Only allow whitelisted page names (no path traversal)
     if (!isSafePageName(page_name) || std::find(ALLOWED_PAGES.begin(), ALLOWED_PAGES.end(), page_name) == ALLOWED_PAGES.end()) {
-        // Invalid page name â€” navigate to loader as safe default
-        navigateToLocal("loader");
-        return;
+        return; // Invalid page name, do nothing
     }
 
     wchar_t exe_path[MAX_PATH];
     GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
     std::filesystem::path dir = std::filesystem::path(exe_path).parent_path();
-    auto html_path = std::filesystem::weakly_canonical(dir / "ui" / (page_name + ".html"));
+    auto html_path = dir / "ui" / (page_name + ".html");
 
     // SECURITY: verify resolved path is within the UI directory
-    auto ui_dir = std::filesystem::weakly_canonical(dir / "ui");
-    auto html_str = html_path.wstring();
-    auto ui_str = ui_dir.wstring();
+    auto ui_dir = dir / "ui";
+    auto html_str = std::filesystem::weakly_canonical(html_path).wstring();
+    auto ui_str = std::filesystem::weakly_canonical(ui_dir).wstring();
 
     if (startsWith(html_str, ui_str) && std::filesystem::exists(html_path)) {
-        std::wstring file_url = L"file:///" + html_str;
-        for (auto& c : file_url) { if (c == L'\\') c = L'/'; }
+        // Convert to proper file:/// URL
+        std::wstring file_url = L"file:///";
+        for (auto& c : html_str) {
+            if (c == L'\\') file_url += L'/';
+            else file_url += c;
+        }
         navigate(file_url);
-    } else {
-        // Fallback only to known local page â€” never to remote URL
-        navigateToLocal("loader");
     }
 }
 

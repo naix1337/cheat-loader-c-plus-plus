@@ -1,4 +1,4 @@
-﻿#include "App.h"
+#include "App.h"
 
 #include "auth/TokenStore.h"
 #include "core/Config.h"
