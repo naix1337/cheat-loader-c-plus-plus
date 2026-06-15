@@ -36,13 +36,6 @@ static const LogDef LOGS[] = {
 static constexpr int LOG_COUNT = sizeof(LOGS) / sizeof(LOGS[0]);
 static constexpr int DURATION_MS = 6000;
 
-struct LogLine {
-    std::string time;
-    std::string tag;
-    std::string text;
-    ImU32 color;
-};
-
 void DashboardView::render() {
     auth::SessionManager::instance().recordActivity();
 
@@ -62,8 +55,8 @@ void DashboardView::render() {
     float elapsed = (now - boot_start_) * 1000.0f;
     float t = fminf(1.0f, elapsed / DURATION_MS);
     // easeInOut
-    float ease = t < 0.5f ? 2 * t * t : 1 - powf(-2 * t + 2, 2) / 2;
-    int pct = (int)round(ease * 100);
+    float ease = t < 0.5f ? 2 * t * t : 1.0f - powf(-2.0f * t + 2.0f, 2.0f) / 2.0f;
+    int pct = (int)(ease * 100 + 0.5f);
     if (pct > 100) pct = 100;
     bool ready = pct >= 100;
 
