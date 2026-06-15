@@ -65,6 +65,18 @@ app.get("/profile/:username", (_req, res) => {
   res.sendFile(path.join(publicDir, "profile.html"));
 });
 
+// Login page
+app.get("/login", (_req, res) => {
+  res.sendFile(path.join(publicDir, "login.html"));
+});
+
+// Logout — clear token cookie
+app.get("/logout", (_req, res) => {
+  res.clearCookie("token", { path: "/" });
+  res.clearCookie("refresh_token", { path: "/" });
+  res.redirect("/forum");
+});
+
 // Admin panel — serve the static admin.html (JS handles auth + API calls)
 app.get("/admin", (_req, res) => {
   res.sendFile(path.join(publicDir, "admin.html"));

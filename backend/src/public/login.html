@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign In — insolution.cloud</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,sans-serif;background:#06070b;color:#c7d6e2;overflow:hidden;min-height:100vh;display:flex;align-items:center;justify-content:center}
+  @keyframes scan{from{background-position:0 0}to{background-position:0 6px}}
+  .bg{position:fixed;inset:0;background:radial-gradient(120% 90% at 50% -10%,#0d1622,#0a0a0f 48%,#060709)}
+  .grid{position:fixed;inset:-2px;background-image:linear-gradient(rgba(0,212,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.045) 1px,transparent 1px);background-size:42px 42px;pointer-events:none}
+  .scanlines{position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.22) 3px);background-size:100% 6px;animation:scan .5s steps(3) infinite;pointer-events:none;opacity:.6}
+  .card{position:relative;width:380px;padding:32px 28px;border-radius:16px;background:linear-gradient(180deg,rgba(18,24,33,.95),rgba(10,13,18,.95));border:1px solid rgba(0,212,255,.28);box-shadow:0 0 60px -12px rgba(0,212,255,.35),0 30px 80px -30px #000}
+  .diamond{width:32px;height:32px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,.5);border-radius:8px;background:linear-gradient(145deg,rgba(0,212,255,.16),transparent);box-shadow:0 0 14px -2px rgba(0,212,255,.5)}
+  .diamond-inner{width:11px;height:11px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 9px #00d4ff}
+  h1{text-align:center;font-size:20px;font-weight:700;letter-spacing:2px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,.4)}
+  .sub{text-align:center;font-size:11px;color:#5d7488;margin:4px 0 18px;font-family:'Courier New',monospace}
+  .sep{height:1px;margin:16px 0;background:linear-gradient(90deg,transparent,rgba(0,212,255,.25),transparent)}
+  label{display:block;font-size:10px;letter-spacing:1px;color:#5d7488;margin-bottom:6px;font-family:'Courier New',monospace}
+  .field{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;background:rgba(2,6,10,.6);border:1px solid rgba(0,212,255,.2);margin-bottom:14px}
+  .field input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:#e8f4ff;font-size:14px}
+  .field input::placeholder{color:#3c4e5e}
+  .btn{width:100%;padding:13px;border-radius:11px;border:none;cursor:pointer;font-size:14px;font-weight:700;letter-spacing:2px;color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf);transition:opacity .2s}
+  .btn:hover{opacity:.9}
+  .btn:disabled{opacity:.5;cursor:default}
+  .err{font-size:12px;color:#ff8b6b;text-align:center;margin:10px 0 0;display:none}
+  .footer{text-align:center;margin-top:14px;font-size:12px;color:#4f6478}
+  .footer a{color:#8b5cf6;text-decoration:none}
+  .footer a:hover{color:#b39dff}
+  .spinner{width:14px;height:14px;border:2px solid rgba(3,18,26,.35);border-top-color:#03121a;border-radius:50%;display:inline-block;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grid"></div>
+<div class="scanlines"></div>
+<div class="card">
+  <div class="diamond"><div class="diamond-inner"></div></div>
+  <h1>AETHER</h1>
+  <div class="sub">SECURE ACCESS PORTAL</div>
+  <div class="sep"></div>
+  <form id="loginForm" onsubmit="return handleLogin(event)">
+    <label>USERNAME</label>
+    <div class="field">
+      <input id="username" placeholder="your handle" autocomplete="username" required>
+    </div>
+    <label>PASSWORD</label>
+    <div class="field">
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+    </div>
+    <div class="err" id="loginError"></div>
+    <button class="btn" id="loginBtn" type="submit">SIGN IN</button>
+  </form>
+  <div class="sep"></div>
+  <div class="footer">
+    No account? <a href="/register">Create one</a>
+  </div>
+</div>
+<script>
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value;
+  if (!user || !pass) { err.textContent = '⚠ Fill in all fields'; err.style.display = 'block'; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> SIGNING IN';
+  err.style.display = 'none';
+  try {
+    const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:user, password:pass}) });
+    const data = await r.json();
+    if (r.ok && data.access_token) {
+      document.cookie = 'token=' + encodeURIComponent(data.access_token) + '; path=/; max-age=900; SameSite=Lax; Secure';
+      document.cookie = 'refresh_token=' + encodeURIComponent(data.refresh_token) + '; path=/; max-age=2592000; SameSite=Lax; Secure';
+      window.location.href = '/forum';
+    } else if (data.requires_2fa) {
+      // 2FA flow - store temp token and redirect
+      window.location.href = '/login?2fa=1&user=' + encodeURIComponent(user);
+    } else {
+      err.textContent = '⚠ ' + (data.error || 'Invalid credentials'); err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'SIGN IN';
+    }
+  } catch(e) {
+    err.textContent = '⚠ Connection error'; err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'SIGN IN';
+  }
+  return false;
+}
+</script>
+</body>
+</html>

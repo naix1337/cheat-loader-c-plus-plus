@@ -69,13 +69,16 @@ async function fetchForum() {
     } catch(e) {}
   }
 
-  // Fetch categories via a custom endpoint or derive from known data
-  // We'll use the forum.categories endpoint
+  // Fetch categories
   let categories = [];
   try {
     const r = await fetch('/api/forum/categories', { headers: apiHeaders() });
     if (r.ok) categories = await r.json();
   } catch(e) {}
+
+  // Guests can only see Announcements
+  const token = getToken();
+  if (!token) categories = categories.filter(c => c.slug === 'announcements');
 
   if (!categories || categories.length === 0) {
     // Fallback: parse from the forum page or use defaults
@@ -209,10 +212,14 @@ function render() {
     <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#4f6478;margin-top:5px;">${st.label}</div></div>
   </div>`).join('');
 
-  // Filters
+  // Filters — guests only see Announcements
+  const token = getToken();
+  const isAuth = !!token;
+  let cats = s.categories;
+  if (!isAuth) cats = s.categories.filter(c => c.slug === 'announcements');
   const filters = [
-    { id: 'all', label: 'All', count: s.totalThreads },
-    ...s.categories.map(c => ({ id: c.slug, label: c.name, count: c.thread_count || 0 })),
+    { id: 'all', label: isAuth ? 'All' : 'Public', count: s.totalThreads },
+    ...cats.map(c => ({ id: c.slug, label: c.name, count: c.thread_count || 0 })),
   ];
   const filterChips = filters.map(f => {
     const active = s.filter === f.id;
@@ -345,7 +352,7 @@ function render() {
           </div>
           <div style="line-height:1.15;"><div style="font-size:12px;font-weight:600;color:#e8f4ff;">${userName}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;color:${userRoleColor};">${userRole}</div></div>
           <a href="/logout" style="margin-left:6px;color:#4f6478;font-size:11px;text-decoration:none;">✕</a>
-        </div>` : `<a href="/register" style="padding:7px 14px;border-radius:9px;background:linear-gradient(180deg,#1ee0ff,#00a6cf);color:#03121a;font-size:12px;font-weight:700;letter-spacing:1px;text-decoration:none;">SIGN IN</a>`}
+        </div>` : `<a href="/login" style="padding:7px 14px;border-radius:9px;background:linear-gradient(180deg,#1ee0ff,#00a6cf);color:#03121a;font-size:12px;font-weight:700;letter-spacing:1px;text-decoration:none;">SIGN IN</a>`}
       </div>
     </nav>
 
