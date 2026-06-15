@@ -5,9 +5,30 @@
 
 #include <filesystem>
 #include <format>
+#include <regex>
 #include <sstream>
 
 namespace ui {
+
+// Whitelist of allowed local page names
+static const std::vector<std::string> ALLOWED_PAGES = {
+    "loader", "login", "store", "forum", "profile", "admin",
+    "notifications", "conversations"
+};
+
+// Check if a string starts with another string (case insensitive)
+static bool startsWith(const std::wstring& str, const std::wstring& prefix) {
+    if (str.length() < prefix.length()) return false;
+    for (size_t i = 0; i < prefix.length(); ++i) {
+        if (std::tolower(str[i]) != std::tolower(prefix[i])) return false;
+    }
+    return true;
+}
+
+// Check if string contains only safe characters (alphanumeric, dash, underscore)
+static bool isSafePageName(const std::string& name) {
+    return std::regex_match(name, std::regex("^[a-zA-Z0-9_-]+$"));
+}
 
 WebViewManager::WebViewManager(auth::AuthService& auth_service, const core::AppConfig& config,
                                MainThreadEnqueue enqueue)
@@ -76,17 +97,28 @@ void WebViewManager::navigate(const std::wstring& url) {
 }
 
 void WebViewManager::navigateToLocal(const std::string& page_name) {
-    // Determine the path to bundled HTML files
+    // SECURITY: Only allow whitelisted page names (no path traversal)
+    if (!isSafePageName(page_name) || std::find(ALLOWED_PAGES.begin(), ALLOWED_PAGES.end(), page_name) == ALLOWED_PAGES.end()) {
+        // Invalid page name — navigate to loader as safe default
+        navigateToLocal("loader");
+        return;
+    }
+
     wchar_t exe_path[MAX_PATH];
     GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
     std::filesystem::path dir = std::filesystem::path(exe_path).parent_path();
-    auto html_path = dir / "ui" / (page_name + ".html");
+    auto html_path = std::filesystem::weakly_canonical(dir / "ui" / (page_name + ".html"));
 
-    if (std::filesystem::exists(html_path)) {
+    // SECURITY: verify resolved path is within the UI directory
+    auto ui_dir = std::filesystem::weakly_canonical(dir / "ui");
+    auto html_str = html_path.wstring();
+    auto ui_str = ui_dir.wstring();
+
+    if (startsWith(html_str, ui_str) && std::filesystem::exists(html_path)) {
         navigate(html_path.wstring());
     } else {
-        // Fallback: load from web server
-        navigate(std::format(L"https://insolution.cloud/{}", std::wstring(page_name.begin(), page_name.end())));
+        // Fallback only to known local page — never to remote URL
+        navigateToLocal("loader");
     }
 }
 
@@ -168,11 +200,12 @@ HRESULT WebViewManager::onWebMessageReceived(ICoreWebView2*, ICoreWebView2WebMes
             });
 
         } else if (action == "navigate") {
-            std::string page = json.value("page", "home");
+            std::string page = json.value("page", "loader");
             std::string target = json.value("url", "");
             if (!target.empty()) {
-                std::wstring wtarget(target.begin(), target.end());
-                navigate(wtarget);
+                // SECURITY: Only allow navigation to our own local pages
+                // Remote URLs from the web side are not allowed
+                navigateToLocal(page);
             } else {
                 navigateToLocal(page);
             }
@@ -180,8 +213,11 @@ HRESULT WebViewManager::onWebMessageReceived(ICoreWebView2*, ICoreWebView2WebMes
         } else if (action == "open_external") {
             std::string url = json.value("url", "");
             if (!url.empty()) {
+                // SECURITY: Only allow https:// URLs — block file://, javascript:, etc.
                 std::wstring wurl(url.begin(), url.end());
-                ShellExecuteW(nullptr, L"open", wurl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+                if (startsWith(wurl, L"https://")) {
+                    ShellExecuteW(nullptr, L"open", wurl.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+                }
             }
 
         } else if (action == "get_config") {
