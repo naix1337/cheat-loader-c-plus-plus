@@ -418,7 +418,7 @@ function renderRegisterPage(csrfToken: string): string {
       submitBtn.innerHTML = '<span class="spinner"></span> Creating account…';
 
       try {
-        const res = await fetch('/api/register', {
+        const res = await fetch('/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, email, password, csrf_token: csrfToken }),
