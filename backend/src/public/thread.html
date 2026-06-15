@@ -322,7 +322,7 @@
           '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;margin-bottom:9px;">/ board / ' + esc(THREAD_META.category) + '</div>' +
           indicatorHtml +
           '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;">' + tagsHtml + '</div>' +
-          '<h1 style="margin:0;font-size:27px;line-height:1.2;font-weight:700;letter-spacing:0.3px;color:#eaf7ff;text-shadow:0 0 18px rgba(0,212,255,0.3);text-wrap:balance;">' + THREAD_META.title + '</h1>' +
+          '<h1 style="margin:0;font-size:27px;line-height:1.2;font-weight:700;letter-spacing:0.3px;color:#eaf7ff;text-shadow:0 0 18px rgba(0,212,255,0.3);text-wrap:balance;">' + esc(THREAD_META.title) + '</h1>' +
           '<div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#54697b;">' +
             '<span>started by <span style="color:#b39dff;">' + esc(THREAD_META.author) + '</span></span>' +
             '<span>· ' + esc(THREAD_META.time) + '</span>' +
@@ -338,9 +338,9 @@
             '<div style="min-width:0;flex:1;">' +
               '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
                 '<span style="font-size:15px;font-weight:700;color:#eaf7ff;">' + esc(THREAD_META.author) + '</span>' +
-                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;letter-spacing:1px;color:#b39dff;padding:2px 8px;border:1px solid rgba(139,92,246,0.4);border-radius:999px;background:rgba(139,92,246,0.1);">' + THREAD_META.authorRank + '</span>' +
+                '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;letter-spacing:1px;color:#b39dff;padding:2px 8px;border:1px solid rgba(139,92,246,0.4);border-radius:999px;background:rgba(139,92,246,0.1);">' + esc(THREAD_META.authorRank) + '</span>' +
               '</div>' +
-              '<div style="margin-top:4px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#54697b;">' + THREAD_META.postCount + ' posts · joined ' + THREAD_META.authorCreated + ' · author</div>' +
+              '<div style="margin-top:4px;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#54697b;">' + esc(THREAD_META.postCount) + ' posts · joined ' + esc(THREAD_META.authorCreated) + ' · author</div>' +
             '</div>' +
             '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#44586a;text-align:right;">#1 · ' + esc(THREAD_META.time) + '</div>' +
           '</div>' +
