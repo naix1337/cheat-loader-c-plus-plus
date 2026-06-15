@@ -137,6 +137,12 @@ void WebViewManager::update() {
     // (empty for now - processing happens in the WebView2 callbacks)
 }
 
+void WebViewManager::resize(const RECT& bounds) {
+    if (controller_) {
+        controller_->put_Bounds(bounds);
+    }
+}
+
 HRESULT WebViewManager::onWebMessageReceived(ICoreWebView2*, ICoreWebView2WebMessageReceivedEventArgs* args) {
     wil::unique_cotaskmem_string msg_raw;
     args->TryGetWebMessageAsString(&msg_raw);

@@ -164,7 +164,20 @@ LRESULT CALLBACK App::wndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
     switch (msg) {
     case WM_SIZE:
-        // WebView2 controller resizes automatically
+        if (app && app->ui_manager_) {
+            RECT bounds;
+            GetClientRect(hwnd, &bounds);
+            app->ui_manager_->resize(bounds);
+        }
+        break;
+
+    case WM_DPICHANGED:
+        if (app && app->ui_manager_) {
+            const RECT* rect = reinterpret_cast<const RECT*>(lparam);
+            SetWindowPos(hwnd, nullptr, rect->left, rect->top,
+                rect->right - rect->left, rect->bottom - rect->top,
+                SWP_NOZORDER | SWP_NOACTIVATE);
+        }
         break;
     case WM_GETMINMAXINFO: {
         auto* mmi = reinterpret_cast<MINMAXINFO*>(lparam);

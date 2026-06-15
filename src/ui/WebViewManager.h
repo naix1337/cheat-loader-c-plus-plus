@@ -31,6 +31,7 @@ public:
     void sendToWeb(const std::string& json_message);
 
     void update(); // process JS bridge queue
+    void resize(const RECT& bounds); // handle DPI/window resize
 
 private:
     // Called from JavaScript via window.chrome.webview.postMessage

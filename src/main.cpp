@@ -32,8 +32,14 @@ void attachDebugConsole() {
 
 #endif
 
+// ── DPI Awareness: ensures WebView2 renders pixel-crisp, not blurry ──
+#pragma comment(linker, "/manifestDependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
 int APIENTRY WinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, LPSTR /*cmd_line*/,
                      int /*cmd_show*/) {
+    // Set per-monitor DPI awareness BEFORE any window creation
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 #if defined(DEBUG_BUILD)
     attachDebugConsole();
 #endif
