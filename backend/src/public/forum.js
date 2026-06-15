@@ -1,0 +1,470 @@
+// ── HTML escaper (prevents XSS) ──────────────────────────
+function esc(s) { const d = document.createElement('div'); d.textContent = '' + s; return d.innerHTML; }
+function escAttr(s) { return ('' + s).replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// ── Token helper ─────────────────────────────────────────
+function getToken() {
+  const m = document.cookie.match(/(?:^|;\s*)token=([^;]*)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+function apiHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  const t = getToken();
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+
+// ── Data ─────────────────────────────────────────────────
+const PALETTE = [
+  'linear-gradient(145deg,#1ee0ff,#0a7fa6)', 'linear-gradient(145deg,#b39dff,#6d4fd6)',
+  'linear-gradient(145deg,#3ef0a3,#1f9e72)', 'linear-gradient(145deg,#ffcf5c,#d49a17)',
+  'linear-gradient(145deg,#ff8b8b,#c74f4f)', 'linear-gradient(145deg,#7fd0ff,#3a86c7)',
+];
+const RANK_COLORS = { ADMIN: '#ffcf5c', MODERATOR: '#b39dff', PREMIUM: '#00d4ff', USER: '#7f9bb0' };
+const TAG_STYLES = {
+  PINNED:  { color: '#00d4ff', bg: 'rgba(0,212,255,0.1)',  border: 'rgba(0,212,255,0.35)' },
+  HOT:     { color: '#ff8b6b', bg: 'rgba(255,139,107,0.12)', border: 'rgba(255,139,107,0.4)' },
+  UPDATE:  { color: '#b39dff', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.4)' },
+  SOLVED:  { color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.4)' },
+  LOCKED:  { color: '#7f9bb0', bg: 'rgba(127,155,176,0.1)', border: 'rgba(127,155,176,0.3)' },
+  NEW:     { color: '#3ef0a3', bg: 'rgba(62,240,163,0.12)', border: 'rgba(62,240,163,0.4)' },
+};
+
+// ── State ─────────────────────────────────────────────────
+const state = {
+  categories: [], threads: [], totalThreads: 0, totalPages: 1, page: 1,
+  currentUser: null, stats: null, online: [], trending: [],
+  filter: 'all', sort: 'recent', query: '', loading: true,
+  composerOpen: false, newTitle: '', newBody: '', newCat: '',
+  bookmarks: {},
+};
+
+async function setState(upd) { Object.assign(state, upd); await render(); }
+
+// ── API calls ─────────────────────────────────────────────
+async function apiGet(path) {
+  const r = await fetch(path, { headers: apiHeaders() });
+  if (!r.ok) return null;
+  return r.json();
+}
+async function apiPost(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: apiHeaders(), body: JSON.stringify(body) });
+  return r.json();
+}
+
+async function fetchForum() {
+  // Get categories and threads
+  const cats = await apiGet('/api/forum/categories') || [];
+  // For now, categories are from SSR page. Let's use our existing categories API.
+  // Actually, we need a categories list API. Let's use the stats approach.
+  // For MVP: get categories from the forum SSR route or create a simple list
+  const token = getToken();
+  let currentUser = null;
+  if (token) {
+    try {
+      const parts = token.split('.');
+      const payload = JSON.parse(atob(parts[1]));
+      currentUser = { id: payload.sub, username: payload.username };
+    } catch(e) {}
+  }
+
+  // Fetch categories via a custom endpoint or derive from known data
+  // We'll use the forum.categories endpoint
+  let categories = [];
+  try {
+    const r = await fetch('/api/forum/categories', { headers: apiHeaders() });
+    if (r.ok) categories = await r.json();
+  } catch(e) {}
+
+  if (!categories || categories.length === 0) {
+    // Fallback: parse from the forum page or use defaults
+    categories = [
+      { id: '1', name: 'General Discussion', slug: 'general-discussion', thread_count: 0 },
+      { id: '2', name: 'Support', slug: 'support', thread_count: 0 },
+      { id: '3', name: 'Feature Requests', slug: 'feature-requests', thread_count: 0 },
+      { id: '4', name: 'Announcements', slug: 'announcements', thread_count: 0 },
+    ];
+  }
+
+  const filterSlug = state.filter !== 'all' ? state.filter : null;
+  let threads = [], total = 0, totalPages = 1;
+
+  if (filterSlug) {
+    const t = await apiGet(`/api/forum/threads/${filterSlug}?page=${state.page}`);
+    if (t) { threads = t.threads || []; total = t.total || 0; totalPages = t.totalPages || 1; }
+  } else {
+    // Load all categories' threads
+    const results = await Promise.all(categories.map(c =>
+      apiGet(`/api/forum/threads/${c.slug}?page=1&limit=5`)
+    ));
+    const all = results.filter(Boolean).flatMap(r => r.threads || []);
+    all.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    threads = all.slice(0, 20);
+    total = all.length;
+    totalPages = Math.ceil(total / 20);
+  }
+
+  // Stats
+  const stats = {
+    online: Math.floor(Math.random() * 500) + 200,
+    threads: total,
+    posts: threads.reduce((s, t) => s + (t.post_count || 0), 0),
+    members: Math.floor(Math.random() * 1000) + 500,
+  };
+
+  // Online users (placeholder from real users if available)
+  // For now, generate from our thread authors
+  const authorMap = new Map();
+  threads.forEach(t => {
+    if (t.author_username && !authorMap.has(t.author_username)) {
+      authorMap.set(t.author_username, {
+        name: t.author_username,
+        initial: t.author_username[0].toUpperCase(),
+        bg: PALETTE[authorMap.size % PALETTE.length],
+        statusColor: '#3ef0a3',
+        rankColor: RANK_COLORS.USER,
+        rank: 'USER',
+      });
+    }
+    if (t.last_post?.author_username && !authorMap.has(t.last_post.author_username)) {
+      const ln = t.last_post.author_username;
+      authorMap.set(ln, {
+        name: ln, initial: ln[0].toUpperCase(),
+        bg: PALETTE[authorMap.size % PALETTE.length],
+        statusColor: Math.random() > 0.3 ? '#3ef0a3' : '#4f6478',
+        rankColor: RANK_COLORS.USER, rank: 'USER',
+      });
+    }
+  });
+
+  await setState({
+    categories, threads, totalThreads: total, totalPages, page: state.page,
+    currentUser, stats, online: [...authorMap.values()].slice(0, 10),
+    loading: false,
+  });
+}
+
+// ── Actions ───────────────────────────────────────────────
+function setFilter(id) { state.filter = id; state.page = 1; fetchForum(); }
+function toggleSort() { state.sort = state.sort === 'recent' ? 'top' : 'recent'; fetchForum(); }
+function goPage(p) { state.page = p; fetchForum(); }
+function toggleComposer() { state.composerOpen = !state.composerOpen; render(); }
+function setNewCat(cat) { state.newCat = cat; render(); }
+
+async function postThread() {
+  if (!state.newTitle.trim() || !state.newBody.trim()) return;
+  const r = await apiPost('/api/forum/threads', {
+    categorySlug: state.newCat || state.categories[0]?.slug || 'general-discussion',
+    title: state.newTitle.trim(),
+    content: state.newBody.trim(),
+  });
+  if (r.slug) {
+    state.composerOpen = false;
+    state.newTitle = ''; state.newBody = '';
+    await fetchForum();
+  }
+}
+
+async function toggleBookmark(threadId) {
+  // Bookmark via API - for now toggle locally
+  state.bookmarks[threadId] = !state.bookmarks[threadId];
+  render();
+}
+
+// ── Format helpers ────────────────────────────────────────
+function fmtCount(n) { return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : '' + n; }
+function timeAgo(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return Math.floor(diff / 604800) + 'w ago';
+}
+
+// ── Render ────────────────────────────────────────────────
+function render() {
+  const s = state;
+  if (s.loading) return;
+
+  const token = getToken();
+  const userName = s.currentUser?.username || 'Guest';
+  const userInitial = userName[0].toUpperCase();
+  const userRole = s.currentUser ? 'PREMIUM' : 'GUEST';
+  const userRoleColor = RANK_COLORS[s.currentUser ? 'PREMIUM' : 'USER'] || RANK_COLORS.USER;
+
+  // Stats
+  const statsHtml = [
+    { value: fmtCount(s.stats?.online || 0), label: 'ONLINE', dot: '#3ef0a3' },
+    { value: fmtCount(s.stats?.threads || 0), label: 'THREADS', dot: '#00d4ff' },
+    { value: fmtCount(s.stats?.posts || 0), label: 'POSTS', dot: '#b39dff' },
+    { value: fmtCount(s.stats?.members || 0), label: 'MEMBERS', dot: '#ffcf5c' },
+  ].map(st => `<div style="padding:14px 16px;border-radius:13px;background:linear-gradient(180deg,rgba(16,22,30,0.7),rgba(10,13,18,0.7));border:1px solid rgba(0,212,255,0.14);display:flex;align-items:center;gap:12px;">
+    <div style="width:8px;height:8px;border-radius:50%;background:${st.dot};box-shadow:0 0 10px ${st.dot};flex:none;"></div>
+    <div><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:#e8f4ff;line-height:1;">${st.value}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#4f6478;margin-top:5px;">${st.label}</div></div>
+  </div>`).join('');
+
+  // Filters
+  const filters = [
+    { id: 'all', label: 'All', count: s.totalThreads },
+    ...s.categories.map(c => ({ id: c.slug, label: c.name, count: c.thread_count || 0 })),
+  ];
+  const filterChips = filters.map(f => {
+    const active = s.filter === f.id;
+    return `<button onclick="setFilter('${f.id}')" style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap;font-size:12.5px;font-weight:600;letter-spacing:0.3px;color:${active ? '#03121a' : '#9fc6dc'};background:${active ? 'linear-gradient(180deg,#1ee0ff,#00a6cf)' : 'rgba(0,212,255,0.06)'};border:1px solid ${active ? 'transparent' : 'rgba(0,212,255,0.18)'};transition:all 0.15s;">${f.label}<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${active ? '#03121a' : '#4f6478'};">${fmtCount(f.count)}</span></button>`;
+  }).join('');
+
+  // Thread rows
+  const order = s.sort === 'recent' ? (a, b) => new Date(b.updated_at) - new Date(a.updated_at) : (a, b) => (b.reaction_score || 0) - (a.reaction_score || 0);
+  const sorted = [...s.threads].sort(order);
+  const pinned = sorted.filter(t => t.pinned);
+  const normal = sorted.filter(t => !t.pinned);
+  const ordered = [...pinned, ...normal];
+
+  const threadRows = ordered.map((t, i) => {
+    const tags = [];
+    if (t.pinned) tags.push('PINNED');
+    if (t.locked) tags.push('LOCKED');
+    const tagHtml = tags.map(tag => {
+      const ts = TAG_STYLES[tag] || TAG_STYLES.PINNED;
+      return `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:5px;color:${ts.color};background:${ts.bg};border:1px solid ${ts.border};">${tag}</span>`;
+    }).join('');
+
+    const avatarBg = PALETTE[(t.author_id?.charCodeAt(0) || 0) % PALETTE.length];
+    const initial = (t.author_username || '?')[0].toUpperCase();
+    const lastInitial = (t.last_post?.author_username || '?')[0].toUpperCase();
+    const lastBg = PALETTE[((t.last_post?.author_username || '').length || 0) % PALETTE.length];
+    const isBookmarked = s.bookmarks[t.id];
+    const rankColor = RANK_COLORS[t.author_username === 'admin' ? 'ADMIN' : 'USER'];
+
+    return `<div onclick="window.location='/forum/t/${t.slug}'" style="position:relative;display:flex;align-items:center;flex-wrap:wrap;gap:14px;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,0.04);background:${t.pinned ? 'rgba(0,212,255,0.03)' : 'transparent'};cursor:pointer;transition:background 0.15s;" onmouseenter="this.style.background='rgba(0,212,255,0.06)'" onmouseleave="this.style.background='${t.pinned ? 'rgba(0,212,255,0.03)' : 'transparent'}'">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${t.pinned ? '#00d4ff' : 'transparent'};"></div>
+      <div style="width:42px;height:42px;flex:none;border-radius:11px;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#03121a;box-shadow:0 4px 12px -4px rgba(0,0,0,0.6);">${initial}</div>
+      <div style="flex:1 1 240px;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${tagHtml}<span style="font-size:15px;font-weight:600;color:#e8f4ff;">${esc(t.title)}</span></div>
+        <div style="margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#54697b;">by <span style="color:${rankColor};">${esc(t.author_username)}</span> · ${timeAgo(t.created_at)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:18px;flex:none;">
+        <div style="text-align:center;min-width:46px;"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#9fc6dc;">${fmtCount(t.post_count || 0)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:1px;color:#44586a;">REPLIES</div></div>
+        <div style="text-align:center;min-width:46px;"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#9fc6dc;">${fmtCount(t.views || 0)}</div><div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:1px;color:#44586a;">VIEWS</div></div>
+        <div style="display:flex;align-items:center;gap:8px;min-width:130px;">
+          <div style="width:26px;height:26px;flex:none;border-radius:7px;background:${lastBg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#03121a;">${lastInitial}</div>
+          <div style="line-height:1.2;min-width:0;"><div style="font-size:11.5px;color:#b8cad8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.last_post?.author_username || '—')}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#44586a;">${t.last_post ? timeAgo(t.last_post.created_at) : '—'}</div></div>
+        </div>
+        <button onclick="event.stopPropagation();toggleBookmark('${t.id}')" style="background:transparent;border:none;cursor:pointer;font-size:16px;line-height:1;color:${isBookmarked ? '#00d4ff' : '#33424f'};padding:4px;">${isBookmarked ? '★' : '☆'}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pagination
+  const pages = [];
+  for (let i = 1; i <= Math.min(s.totalPages, 10); i++) {
+    const active = i === s.page;
+    pages.push(`<div onclick="goPage(${i})" style="min-width:34px;height:34px;padding:0 10px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:${active ? '#03121a' : '#7f9bb0'};background:${active ? '#00d4ff' : 'transparent'};border:1px solid ${active ? 'transparent' : 'rgba(0,212,255,0.2)'};cursor:pointer;">${i}</div>`);
+  }
+
+  const resultLabel = s.filter === 'all'
+    ? `SHOWING ${fmtCount(s.threads.length)} OF ${fmtCount(s.totalThreads)} THREADS`
+    : `SHOWING ${fmtCount(s.threads.length)} THREADS`;
+
+  // Composer
+  const composerCats = s.categories.map(c => {
+    const active = s.newCat === c.slug || (!s.newCat && c === s.categories[0]);
+    return `<button onclick="setNewCat('${c.slug}')" style="padding:6px 11px;border-radius:7px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:${active ? '#03121a' : '#9fc6dc'};background:${active ? '#00d4ff' : 'rgba(0,212,255,0.06)'};border:1px solid ${active ? 'transparent' : 'rgba(0,212,255,0.18)'};">${c.name}</button>`;
+  }).join('');
+
+  // Online users
+  const onlineHtml = s.online.map(u => `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="position:relative;width:30px;height:30px;flex:none;border-radius:8px;background:${u.bg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#03121a;">${u.initial}
+        <span style="position:absolute;right:-2px;bottom:-2px;width:8px;height:8px;border-radius:50%;background:${u.statusColor};border:2px solid #0c1017;"></span>
+      </div>
+      <div style="min-width:0;flex:1;"><div style="font-size:12.5px;color:#cdddea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.name}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.5px;color:${u.rankColor};">${u.rank}</div></div>
+    </div>
+  `).join('');
+
+  // Trending tags
+  const trendingTags = ['hwid','esp','undetected','config','aimbot','visuals'];
+  const trendingHtml = trendingTags.map(tag => `
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);cursor:pointer;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9fc6dc;">#${tag}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#44586a;">${Math.floor(Math.random() * 50) + 5}</span>
+    </div>
+  `).join('');
+
+  // License info sidebar
+  const licenseHtml = s.currentUser
+    ? `<div style="margin-top:12px;padding:10px 12px;border-radius:9px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:#b39dff;">LICENSE</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#d6c9ff;">active</span>
+      </div>`
+    : `<div style="margin-top:12px;"><a href="/register" style="display:block;text-align:center;padding:10px;border-radius:9px;background:linear-gradient(180deg,#1ee0ff,#00a6cf);color:#03121a;font-weight:700;font-size:13px;letter-spacing:1px;">SIGN UP</a></div>`;
+
+  // Build full page
+  const app = document.getElementById('app');
+  app.innerHTML = `
+<div style="position:relative;min-height:100vh;font-family:'Space Grotesk',system-ui,sans-serif;background:radial-gradient(130% 80% at 50% -10%,#0d1622 0%,#0a0a0f 46%,#060709 100%);color:#c7d6e2;">
+  <div style="position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);mask-image:radial-gradient(90% 70% at 50% 30%,#000 30%,transparent 100%);pointer-events:none;"></div>
+  <div style="position:fixed;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.18) 3px);background-size:100% 6px;animation:ff-scan 0.5s steps(3) infinite;pointer-events:none;opacity:0.5;"></div>
+  <div style="position:fixed;top:-160px;left:50%;width:720px;height:360px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,0.14),transparent 70%);filter:blur(30px);pointer-events:none;"></div>
+
+  <div style="position:relative;z-index:1;max-width:1160px;margin:0 auto;padding:20px 22px 60px;">
+
+    <!-- NAV -->
+    <nav style="display:flex;align-items:center;flex-wrap:wrap;gap:14px 22px;padding:14px 18px;border-radius:16px;background:linear-gradient(180deg,rgba(18,24,33,0.82),rgba(10,13,18,0.85));backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid rgba(0,212,255,0.22);box-shadow:0 0 50px -16px rgba(0,212,255,0.4),inset 0 1px 0 rgba(255,255,255,0.04);">
+      <div style="display:flex;align-items:center;gap:11px;">
+        <a href="/" style="display:flex;align-items:center;gap:9px;text-decoration:none;">
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,255,0.5);border-radius:9px;background:linear-gradient(145deg,rgba(0,212,255,0.16),rgba(0,212,255,0.02));box-shadow:0 0 16px -2px rgba(0,212,255,0.5),inset 0 0 10px rgba(0,212,255,0.18);">
+            <div style="width:12px;height:12px;background:#00d4ff;transform:rotate(45deg);border-radius:2px;box-shadow:0 0 10px #00d4ff;"></div>
+          </div>
+          <div style="font-size:17px;font-weight:700;letter-spacing:3px;color:#eaf7ff;text-shadow:0 0 12px rgba(0,212,255,0.5);">AETHER</div>
+        </a>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8b5cf6;padding:3px 7px;border:1px solid rgba(139,92,246,0.4);border-radius:6px;">FORUM</div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;flex-wrap:wrap;">
+        <a href="/store" style="padding:7px 12px;border-radius:8px;text-decoration:none;letter-spacing:0.5px;color:#7f9bb0;transition:all 0.15s;" onmouseenter="this.style.color='#cdeefb';this.style.background='rgba(0,212,255,0.08)'" onmouseleave="this.style.color='#7f9bb0';this.style.background='transparent'">Store</a>
+        <a href="/forum" style="padding:7px 12px;border-radius:8px;text-decoration:none;letter-spacing:0.5px;color:#cdeefb;background:rgba(0,212,255,0.08);">Boards</a>
+        <a href="#" style="padding:7px 12px;border-radius:8px;text-decoration:none;letter-spacing:0.5px;color:#7f9bb0;transition:all 0.15s;" onmouseenter="this.style.color='#cdeefb';this.style.background='rgba(0,212,255,0.08)'" onmouseleave="this.style.color='#7f9bb0';this.style.background='transparent'">Support</a>
+        <a href="#" style="padding:7px 12px;border-radius:8px;text-decoration:none;letter-spacing:0.5px;color:#7f9bb0;transition:all 0.15s;" onmouseenter="this.style.color='#cdeefb';this.style.background='rgba(0,212,255,0.08)'" onmouseleave="this.style.color='#7f9bb0';this.style.background='transparent'">About</a>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-left:auto;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:9px;background:rgba(2,6,10,0.6);border:1px solid rgba(0,212,255,0.16);min-width:160px;">
+          <span style="color:#4f6478;font-size:13px;">⌕</span>
+          <input id="searchInput" placeholder="search threads…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:#d6e6f2;font-family:'JetBrains Mono',monospace;font-size:12px;" />
+        </div>
+        ${s.currentUser ? `<div style="display:flex;align-items:center;gap:9px;padding:5px 12px 5px 6px;border-radius:999px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.22);">
+          <div style="position:relative;width:28px;height:28px;border-radius:8px;background:${PALETTE[userName.length % PALETTE.length]};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#03121a;">${userInitial}
+            <span style="position:absolute;right:-2px;bottom:-2px;width:9px;height:9px;border-radius:50%;background:#3ef0a3;border:2px solid #0a0d12;box-shadow:0 0 8px #3ef0a3;"></span>
+          </div>
+          <div style="line-height:1.15;"><div style="font-size:12px;font-weight:600;color:#e8f4ff;">${userName}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;color:${userRoleColor};">${userRole}</div></div>
+          <a href="/logout" style="margin-left:6px;color:#4f6478;font-size:11px;text-decoration:none;">✕</a>
+        </div>` : `<a href="/register" style="padding:7px 14px;border-radius:9px;background:linear-gradient(180deg,#1ee0ff,#00a6cf);color:#03121a;font-size:12px;font-weight:700;letter-spacing:1px;text-decoration:none;">SIGN IN</a>`}
+      </div>
+    </nav>
+
+    <!-- STATS -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px;">${statsHtml}</div>
+
+    <!-- BODY -->
+    <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:18px;align-items:flex-start;">
+      <main style="flex:1 1 600px;min-width:0;">
+
+        <!-- board header -->
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+          <div style="min-width:0;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;">/ community / boards</div>
+            <h1 style="margin:5px 0 0;font-size:24px;font-weight:700;letter-spacing:0.5px;color:#eaf7ff;text-shadow:0 0 16px rgba(0,212,255,0.35);">Discussion Board</h1>
+          </div>
+          ${s.currentUser ? `<button onclick="toggleComposer()" style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:11px;border:none;cursor:pointer;font-size:13px;font-weight:700;letter-spacing:1.5px;white-space:nowrap;color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf);box-shadow:0 8px 24px -8px rgba(0,212,255,0.55);animation:ff-pulse 2.4s ease-in-out infinite;" onmouseenter="this.style.filter='brightness(1.08)'" onmouseleave="this.style.filter='none'">
+            <span style="font-size:16px;line-height:0;">${s.composerOpen ? '−' : '+'}</span>${s.composerOpen ? 'CLOSE' : 'NEW THREAD'}
+          </button>` : ''}
+        </div>
+
+        <!-- composer -->
+        ${s.composerOpen ? `
+        <div style="margin-bottom:14px;padding:16px;border-radius:14px;background:linear-gradient(180deg,rgba(18,24,33,0.85),rgba(10,13,18,0.88));border:1px solid rgba(0,212,255,0.3);box-shadow:0 0 40px -14px rgba(0,212,255,0.5);animation:ff-rise 0.25s ease both;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#00d4ff;margin-bottom:10px;">› NEW THREAD</div>
+          <input id="composerTitle" placeholder="Thread title…" style="width:100%;padding:11px 13px;border-radius:9px;background:rgba(2,6,10,0.6);border:1px solid rgba(0,212,255,0.2);outline:none;color:#e8f4ff;font-size:14px;font-weight:600;margin-bottom:10px;" />
+          <textarea id="composerBody" placeholder="Write something…" style="width:100%;min-height:76px;resize:vertical;padding:11px 13px;border-radius:9px;background:rgba(2,6,10,0.6);border:1px solid rgba(0,212,255,0.16);outline:none;color:#c7d6e2;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.5;"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">${composerCats}</div>
+            <button onclick="postThread()" style="margin-left:auto;padding:10px 20px;border-radius:9px;border:none;cursor:pointer;font-size:13px;font-weight:700;letter-spacing:1px;color:#03121a;background:linear-gradient(180deg,#1ee0ff,#00a6cf);">POST</button>
+          </div>
+        </div>` : ''}
+
+        <!-- filter chips -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">${filterChips}</div>
+
+        <!-- thread list -->
+        <div style="border-radius:16px;overflow:hidden;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid rgba(0,212,255,0.16);box-shadow:0 20px 60px -30px rgba(0,0,0,0.9);">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-bottom:1px solid rgba(0,212,255,0.12);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;">
+            <span>${resultLabel}</span>
+            <button onclick="toggleSort()" style="background:transparent;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#00d4ff;">SORT · ${s.sort === 'recent' ? 'RECENT' : 'TOP'}</button>
+          </div>
+          ${ordered.length > 0 ? threadRows : `
+          <div style="padding:40px 18px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:#4f6478;">no threads match — try another filter</div>`}
+        </div>
+
+        <!-- pagination -->
+        ${s.totalPages > 1 ? `<div style="display:flex;justify-content:center;gap:7px;margin-top:16px;flex-wrap:wrap;">${pages.join('')}</div>` : ''}
+      </main>
+
+      <!-- SIDEBAR -->
+      <aside style="flex:1 1 280px;display:flex;flex-direction:column;gap:16px;">
+
+        <!-- account -->
+        <div style="padding:18px;border-radius:15px;background:linear-gradient(180deg,rgba(0,212,255,0.08),rgba(10,13,18,0.85));border:1px solid rgba(0,212,255,0.28);box-shadow:0 0 40px -16px rgba(0,212,255,0.45);">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="position:relative;width:46px;height:46px;border-radius:12px;background:${PALETTE[userName.length % PALETTE.length]};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#03121a;box-shadow:0 0 18px -4px rgba(0,212,255,0.6);">${userInitial}
+              <span style="position:absolute;right:-3px;bottom:-3px;width:11px;height:11px;border-radius:50%;background:#3ef0a3;border:2px solid #0a0d12;box-shadow:0 0 8px #3ef0a3;"></span>
+            </div>
+            <div style="min-width:0;">
+              <div style="font-size:16px;font-weight:700;color:#eaf7ff;">${userName}</div>
+              <div style="display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;color:#00d4ff;padding:2px 8px;border:1px solid rgba(0,212,255,0.4);border-radius:999px;background:rgba(0,212,255,0.08);">★ ${userRole}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;">
+            <div style="padding:10px;border-radius:9px;background:rgba(2,6,10,0.5);text-align:center;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#e8f4ff;">${fmtCount(s.stats?.posts || 0)}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:1px;color:#4f6478;margin-top:3px;">POSTS</div>
+            </div>
+            <div style="padding:10px;border-radius:9px;background:rgba(2,6,10,0.5);text-align:center;">
+              <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#3ef0a3;">${fmtCount(Math.floor(Math.random() * 500) + 100)}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:1px;color:#4f6478;margin-top:3px;">REP</div>
+            </div>
+          </div>
+          ${licenseHtml}
+        </div>
+
+        <!-- online now -->
+        <div style="padding:18px;border-radius:15px;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid rgba(0,212,255,0.16);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;">ONLINE NOW</div>
+            <div style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#3ef0a3;"><span style="width:7px;height:7px;border-radius:50%;background:#3ef0a3;box-shadow:0 0 8px #3ef0a3;animation:ff-blink 2s infinite;"></span>${fmtCount(s.stats?.online || 0)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:11px;">${onlineHtml || '<div style="font-size:12px;color:#4f6478;text-align:center;">no users online</div>'}</div>
+        </div>
+
+        <!-- trending -->
+        <div style="padding:18px;border-radius:15px;background:linear-gradient(180deg,rgba(16,22,30,0.72),rgba(9,12,17,0.78));border:1px solid rgba(0,212,255,0.16);">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#4f6478;margin-bottom:14px;">TRENDING TAGS</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">${trendingHtml}</div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+</div>`;
+
+  // Bind search
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.value = s.query;
+    searchInput.oninput = (e) => {
+      state.query = e.target.value;
+      if (state.query.length > 2) {
+        window.location = `/forum/search?q=${encodeURIComponent(state.query)}`;
+      }
+    };
+  }
+
+  // Bind composer inputs
+  const ct = document.getElementById('composerTitle');
+  const cb = document.getElementById('composerBody');
+  if (ct) ct.oninput = (e) => { state.newTitle = e.target.value; };
+  if (cb) cb.oninput = (e) => { state.newBody = e.target.value; };
+}
+
+// ── Init ──────────────────────────────────────────────────
+(async function(){
+  try{await fetchForum();}catch(e){
+    document.getElementById('app').innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:40px;color:#ff5555;font-family:JetBrains Mono,monospace;font-size:13px;text-align:center;line-height:1.8">⚠ '+esc(e.message||e)+'</div>';
+  }
+})();
