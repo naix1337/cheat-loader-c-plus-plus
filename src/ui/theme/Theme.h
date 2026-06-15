@@ -17,6 +17,10 @@ inline constexpr ImVec4 kGreen{0.243f, 0.941f, 0.639f, 1.0f};        // #3ef0a3
 inline constexpr ImVec4 kGold{1.0f, 0.812f, 0.361f, 1.0f};           // #ffcf5c
 inline constexpr ImVec4 kRed{1.0f, 0.35f, 0.45f, 1.0f};
 inline constexpr ImVec4 kWarning{1.0f, 0.75f, 0.2f, 1.0f};
+
+// Backward-compat aliases for existing code
+inline constexpr ImVec4 kError = kRed;
+inline constexpr ImVec4 kSuccess = kGreen;
 inline constexpr ImVec4 kText{0.910f, 0.910f, 0.941f, 1.0f};         // #e8e8f0
 inline constexpr ImVec4 kTextMuted{0.376f, 0.376f, 0.439f, 1.0f};     // #606070
 inline constexpr ImVec4 kTextDim{0.271f, 0.329f, 0.388f, 1.0f};      // #455468
