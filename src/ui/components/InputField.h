@@ -7,6 +7,9 @@
 #include <cstring>
 #include <string>
 
+// strncpy deprecation — use secure version
+#pragma warning(disable : 4996)
+
 namespace ui::components {
 
 struct InputFieldResult {
