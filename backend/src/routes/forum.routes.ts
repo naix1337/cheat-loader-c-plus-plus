@@ -368,6 +368,22 @@ router.get("/api/forum/categories", async (_req: AuthRequest, res: Response) => 
 });
 
 /**
+ * GET /api/forum/threads/:slug — list threads in a category (paginated)
+ */
+router.get("/api/forum/threads/:slug", async (req: AuthRequest, res: Response) => {
+  try {
+    const slug = req.params.slug as string;
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+    const result = await forumService.listThreads(slug, page, limit);
+    res.json(result);
+  } catch (err) {
+    console.error("Error listing threads:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * POST /api/forum/threads — create a new thread
  */
 router.post("/api/forum/threads", requireAuth, async (req: AuthRequest, res: Response) => {

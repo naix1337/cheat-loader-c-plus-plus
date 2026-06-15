@@ -495,7 +495,7 @@ function render() {
 }
 
 // ── Init ──────────────────────────────────────────────────
-fetchForum();
+fetchForum().catch(function(){document.getElementById('app').innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#ff5555;font-family:JetBrains Mono,monospace;font-size:13px;">⚠ Forum konnte nicht geladen werden</div>';});
 </script>
 </body>
 </html>

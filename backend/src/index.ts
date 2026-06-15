@@ -26,14 +26,19 @@ app.use(express.json({ limit: "16kb" }));
 app.use(requestLogger);
 app.use(globalRateLimiter);
 
-// Serve static frontend from public/ directory
-const publicDir = path.join(__dirname, "public");
-app.use(express.static(publicDir, { extensions: ["html"] }));
-
 // API routes
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// Root redirects to forum
+app.get("/", (_req, res) => {
+  res.redirect("/forum");
+});
+
+// Serve static frontend from public/ directory
+const publicDir = path.join(__dirname, "public");
+app.use(express.static(publicDir, { extensions: ["html"] }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);

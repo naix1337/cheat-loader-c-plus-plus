@@ -17,11 +17,11 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
   .bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;overflow:hidden;background:radial-gradient(120% 90% at 50% -10%,#0d1622,#0a0a0f 48%,#060709)}
-  .grid{position:absolute;inset:-2px;background-image:linear-gradient(rgba(0,212,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.045) 1px,transparent 1px);background-size:42px 42px;mask-image:radial-gradient(80% 70% at 50% 40%,#000 30%,transparent 100%);-webkit-mask-image:radial-gradient(80% 70% at 50% 40%,#000 30%,transparent 100%);pointer-events:none}
+  .grid{position:absolute;inset:-2px;background-image:linear-gradient(rgba(0,212,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.045) 1px,transparent 1px);background-size:42px 42px;pointer-events:none}
   .scanlines{position:absolute;inset:0;background-image:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.22) 3px);background-size:100% 6px;animation:scan .5s steps(3) infinite;pointer-events:none;opacity:.6}
-  .glow-top{position:absolute;top:-120px;left:50%;width:520px;height:320px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,.18),transparent 70%);filter:blur(20px);pointer-events:none}
-  .glow-bot{position:absolute;bottom:-140px;left:30%;width:460px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.14),transparent 70%);filter:blur(24px);pointer-events:none}
-  .card{position:relative;width:min(480px,100%);border-radius:18px;padding:26px 26px 24px;background:linear-gradient(180deg,rgba(18,24,33,.82),rgba(10,13,18,.86));backdrop-filter:blur(22px)saturate(140%);-webkit-backdrop-filter:blur(22px)saturate(140%);border:1px solid rgba(0,212,255,.28);box-shadow:0 0 0 1px rgba(0,212,255,.06),0 0 60px -12px rgba(0,212,255,.35),0 30px 80px -30px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+  .glow-top{position:absolute;top:-120px;left:50%;width:520px;height:320px;transform:translateX(-50%);background:radial-gradient(circle,rgba(0,212,255,.14),transparent 70%);pointer-events:none}
+  .glow-bot{position:absolute;bottom:-140px;left:30%;width:460px;height:300px;background:radial-gradient(circle,rgba(139,92,246,.1),transparent 70%);pointer-events:none}
+  .card{position:relative;width:min(480px,100%);border-radius:18px;padding:26px 26px 24px;background:linear-gradient(180deg,rgba(18,24,33,.95),rgba(10,13,18,.95));border:1px solid rgba(0,212,255,.28);box-shadow:0 0 0 1px rgba(0,212,255,.06),0 0 60px -12px rgba(0,212,255,.35),0 30px 80px -30px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
   .scanband{position:absolute;left:0;right:0;top:0;height:60px;background:linear-gradient(180deg,rgba(0,212,255,.1),transparent);animation:scanband 4.5s linear infinite;pointer-events:none}
   .header{display:flex;align-items:center;justify-content:space-between;position:relative}
   .logo{display:flex;align-items:center;gap:12px}
