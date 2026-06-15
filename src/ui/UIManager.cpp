@@ -14,7 +14,7 @@ UIManager::UIManager(auth::AuthService& auth_service, const core::AppConfig& con
       twofa_view_(auth_service, [this](std::function<void()> task) {
           enqueueMainThread(std::move(task));
       }),
-      dashboard_view_(auth_service, [this](std::function<void()> task) {
+      dashboard_view_(auth_service, config, [this](std::function<void()> task) {
           enqueueMainThread(std::move(task));
       }) {
     theme::apply();
